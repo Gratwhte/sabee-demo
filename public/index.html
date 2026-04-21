@@ -1536,10 +1536,11 @@ body {
   /* ============================================================
      INIT
      ============================================================ */
-  function init() {
+async function init() {
     bindOnboarding();
 
-    if(load()) {
+    const loaded = await load();
+    if(loaded) {
       $('onboarding').classList.add('hidden');
       $('app-wrap').classList.add('active');
       bindApp();
@@ -1549,7 +1550,7 @@ body {
     }
   }
 
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', init);
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', ()=> init());
   else init();
 
 })();
