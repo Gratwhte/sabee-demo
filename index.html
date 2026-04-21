@@ -1,0 +1,1558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sabee — Team Days Off</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --amber: #D97706;
+  --amber-hover: #B45309;
+  --amber-light: #FEF3C7;
+  --amber-subtle: #FFFBEB;
+  --bg: #F8FAFC;
+  --surface: #FFFFFF;
+  --surface-raised: #F1F5F9;
+  --border: #E2E8F0;
+  --border-strong: #CBD5E1;
+  --text: #0F172A;
+  --text-secondary: #475569;
+  --text-disabled: #94A3B8;
+  --weekend-bg: #F1F5F9;
+  --success: #059669;
+  --success-light: #ECFDF5;
+  --warning: #EA580C;
+  --warning-light: #FFF7ED;
+  --error: #DC2626;
+  --error-light: #FEF2F2;
+  --sp-1: 2px; --sp-2: 4px; --sp-3: 6px;
+  --sp-4: 8px; --sp-5: 12px; --sp-6: 16px;
+  --sp-7: 20px; --sp-8: 24px; --sp-9: 32px;
+  --sp-10: 40px;
+  --r-sm: 4px; --r-md: 6px; --r-lg: 8px; --r-xl: 12px;
+  --shadow-sm: 0 1px 2px rgba(15,23,42,0.04);
+  --shadow: 0 1px 3px rgba(15,23,42,0.06), 0 1px 2px rgba(15,23,42,0.04);
+  --shadow-lg: 0 8px 24px rgba(15,23,42,0.12);
+  --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+  --transition: 0.15s ease;
+}
+
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: var(--font); background: var(--bg); color: var(--text);
+  font-size: 0.875rem; line-height: 1.5; min-height: 100vh;
+  -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+}
+
+.skip-link {
+  position: absolute; top: -50px; left: var(--sp-4);
+  background: var(--amber); color: #fff;
+  padding: var(--sp-4) var(--sp-6); border-radius: var(--r-md);
+  z-index: 9999; font-weight: 600; text-decoration: none;
+  transition: top var(--transition);
+}
+.skip-link:focus { top: var(--sp-4); }
+:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+}
+.hidden { display: none !important; }
+
+.btn {
+  padding: var(--sp-4) var(--sp-6); border: none; border-radius: var(--r-md);
+  font-size: 0.8125rem; font-weight: 600; line-height: 1; cursor: pointer;
+  transition: all var(--transition); display: inline-flex;
+  align-items: center; gap: var(--sp-3); font-family: var(--font);
+}
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn-primary { background: var(--amber); color: #fff; }
+.btn-primary:hover:not(:disabled) { background: var(--amber-hover); }
+.btn-secondary { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+.btn-secondary:hover:not(:disabled) { background: var(--surface-raised); }
+.btn-danger { background: var(--error); color: #fff; }
+.btn-danger:hover:not(:disabled) { background: #B91C1C; }
+.btn-ghost { background: transparent; color: var(--text-secondary); }
+.btn-ghost:hover:not(:disabled) { background: var(--surface-raised); color: var(--text); }
+.btn-sm { padding: var(--sp-2) var(--sp-4); font-size: 0.75rem; }
+
+/* ========== Onboarding ========== */
+.onboarding {
+  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  padding: var(--sp-8);
+}
+.onboarding-card {
+  background: var(--surface); border-radius: var(--r-xl);
+  padding: var(--sp-9) var(--sp-8); max-width: 440px; width: 100%;
+  box-shadow: var(--shadow-lg); border: 1px solid var(--border);
+  text-align: center;
+}
+.onboarding-logo {
+  display: flex; align-items: center; justify-content: center;
+  gap: var(--sp-4); margin-bottom: var(--sp-7);
+}
+.onboarding-logo h1 { font-size: 1.5rem; font-weight: 700; color: var(--text); }
+.onboarding-logo h1 span { color: var(--amber); }
+.onboarding-welcome {
+  font-size: 1.0625rem; font-weight: 600; margin-bottom: var(--sp-2);
+}
+.onboarding-desc {
+  font-size: 0.8125rem; color: var(--text-secondary);
+  margin-bottom: var(--sp-7); line-height: 1.5;
+}
+.onboarding-label {
+  display: block; text-align: left; font-size: 0.6875rem;
+  font-weight: 700; color: var(--text-disabled);
+  text-transform: uppercase; letter-spacing: 0.06em;
+  margin-bottom: var(--sp-2);
+}
+.onboarding-add-row {
+  display: flex; gap: var(--sp-3); margin-bottom: var(--sp-3);
+}
+.onboarding-input {
+  flex: 1; padding: var(--sp-4) var(--sp-5); border: 1px solid var(--border);
+  border-radius: var(--r-md); font-size: 0.875rem; font-family: var(--font);
+  color: var(--text);
+}
+.onboarding-input:focus {
+  border-color: var(--amber); box-shadow: 0 0 0 3px var(--amber-light); outline: none;
+}
+.onboarding-error {
+  font-size: 0.8125rem; color: var(--error); text-align: left;
+  min-height: 1.2em; margin-bottom: var(--sp-3);
+  visibility: hidden;
+}
+.onboarding-error.visible { visibility: visible; }
+.onboarding-members {
+  text-align: left; margin-bottom: var(--sp-5);
+  max-height: 220px; overflow-y: auto;
+}
+.onboarding-empty {
+  font-size: 0.8125rem; color: var(--text-disabled);
+  text-align: center; padding: var(--sp-6) 0;
+}
+.onboarding-member {
+  display: flex; align-items: center; gap: var(--sp-4);
+  padding: var(--sp-4) var(--sp-5); border: 1px solid var(--border);
+  border-radius: var(--r-md); margin-bottom: var(--sp-3);
+  transition: background var(--transition);
+}
+.onboarding-member:hover { background: var(--surface-raised); }
+.onboarding-member-color {
+  width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0;
+  cursor: pointer; transition: transform 0.1s ease;
+  border: 2px solid var(--surface); box-shadow: 0 0 0 1px var(--border);
+  position: relative;
+}
+.onboarding-member-color:hover { transform: scale(1.2); }
+.onboarding-member-name {
+  font-weight: 500; font-size: 0.8125rem; flex: 1;
+}
+.onboarding-member-remove {
+  flex-shrink: 0; width: 26px; height: 26px; padding: 0;
+  border-radius: 50%; font-size: 0.85rem;
+}
+.onboarding-count {
+  display: block; font-size: 0.75rem; color: var(--text-disabled);
+  margin-bottom: var(--sp-5);
+}
+.onboarding-start { width: 100%; justify-content: center; padding: var(--sp-5) var(--sp-6); font-size: 0.875rem; }
+
+/* ========== Color Popover ========== */
+.color-popover-anchor { position: relative; display: inline-flex; }
+.color-popover {
+  position: absolute; z-index: 600;
+  top: calc(100% + 6px); left: 50%; transform: translateX(-50%);
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-lg); padding: var(--sp-4);
+  box-shadow: var(--shadow-lg);
+  display: flex; flex-wrap: wrap; gap: var(--sp-3);
+  width: 174px;
+  opacity: 0; visibility: hidden;
+  transition: opacity 0.15s ease, visibility 0.15s ease;
+}
+.color-popover.open { opacity: 1; visibility: visible; }
+.color-popover::before {
+  content: ''; position: absolute; top: -5px; left: 50%; transform: translateX(-50%);
+  width: 10px; height: 10px; background: var(--surface);
+  border-left: 1px solid var(--border); border-top: 1px solid var(--border);
+  transform: translateX(-50%) rotate(45deg);
+}
+.color-swatch {
+  width: 22px; height: 22px; border-radius: 50%; border: 2px solid transparent;
+  cursor: pointer; transition: all var(--transition);
+  padding: 0; outline: none; flex-shrink: 0;
+}
+.color-swatch:hover { transform: scale(1.15); }
+.color-swatch:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+.color-swatch.active {
+  border-color: var(--text);
+  box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--text);
+}
+
+/* ========== App ========== */
+.app-wrap { display: none; }
+.app-wrap.active { display: block; }
+
+/* ========== Header ========== */
+.header {
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  padding: var(--sp-5) var(--sp-8); display: flex; align-items: center;
+  justify-content: space-between; position: sticky; top: 0;
+  z-index: 100; box-shadow: var(--shadow-sm);
+}
+.header-brand { display: flex; align-items: center; gap: var(--sp-4); }
+.logo-icon { flex-shrink: 0; display: block; }
+.brand-text { display: flex; flex-direction: column; }
+.brand-text h1 {
+  font-size: 1.25rem; font-weight: 700; color: var(--text);
+  letter-spacing: -0.01em; line-height: 1.2;
+}
+.brand-text h1 span { color: var(--amber); }
+.version {
+  font-size: 0.5625rem; color: var(--text-disabled); font-weight: 500;
+  letter-spacing: 0.04em; margin-top: -1px;
+}
+.header-controls { display: flex; align-items: center; gap: var(--sp-5); }
+.active-user {
+  display: flex; align-items: center; gap: var(--sp-3);
+  font-size: 0.8125rem; font-weight: 500; color: var(--text-secondary);
+}
+.active-user-name {
+  max-width: 140px; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap;
+}
+.user-color-dot {
+  width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0;
+  border: 2px solid var(--surface); box-shadow: 0 0 0 1px var(--border);
+  transition: background var(--transition);
+}
+.user-select {
+  padding: var(--sp-3) var(--sp-5); border: 1px solid var(--border);
+  border-radius: var(--r-md); font-size: 0.8125rem; font-weight: 500;
+  background: var(--surface); color: var(--text);
+  cursor: pointer; font-family: var(--font);
+}
+.user-select:focus {
+  border-color: var(--amber); box-shadow: 0 0 0 3px var(--amber-light); outline: none;
+}
+
+/* ========== Main Layout ========== */
+.main { max-width: 1200px; margin: 0 auto; padding: var(--sp-8); }
+.user-mode { display: grid; grid-template-columns: 1fr 300px; gap: var(--sp-8); align-items: start; }
+
+/* ========== Calendar ========== */
+.calendar {
+  background: var(--surface); border-radius: var(--r-xl);
+  padding: var(--sp-7); box-shadow: var(--shadow); border: 1px solid var(--border);
+}
+.calendar-nav {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: var(--sp-6);
+}
+.calendar-nav h2 {
+  font-size: 1.0625rem; font-weight: 600; user-select: none; letter-spacing: -0.01em;
+}
+.nav-btn {
+  width: 32px; height: 32px; padding: 0; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.15rem; line-height: 1;
+}
+.calendar-weekdays {
+  display: grid; grid-template-columns: repeat(7, 1fr); text-align: center;
+  font-size: 0.6875rem; font-weight: 600; color: var(--text-disabled);
+  text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: var(--sp-2);
+}
+.calendar-weekdays span { padding: var(--sp-3) 0; }
+.calendar-weekdays span:nth-child(n+6) { color: var(--border-strong); }
+.calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: var(--sp-1); }
+.selection-status {
+  margin-top: var(--sp-5); padding: var(--sp-4) var(--sp-5);
+  background: var(--amber-subtle); border: 1px solid var(--amber-light);
+  border-radius: var(--r-md); display: flex; align-items: center;
+  justify-content: space-between; font-size: 0.8125rem;
+  color: var(--amber-hover); font-weight: 500;
+}
+
+/* ========== Day Cells ========== */
+.day-cell {
+  min-height: 68px; padding: var(--sp-2) var(--sp-3); border-radius: var(--r-md);
+  cursor: pointer; transition: background var(--transition), border-color var(--transition);
+  position: relative; border: 2px solid transparent; user-select: none;
+}
+.day-cell:hover { background: var(--surface-raised); }
+.day-cell.weekend { background: var(--weekend-bg); min-height: 52px; }
+.day-cell.weekend:hover { background: var(--border); }
+.day-cell.other-month { opacity: 0.2; cursor: default; pointer-events: none; }
+.day-cell.today .day-number {
+  background: var(--amber); color: #fff; border-radius: 50%;
+  width: 22px; height: 22px; display: inline-flex;
+  align-items: center; justify-content: center; font-weight: 700;
+}
+.day-cell.selection-start { border-color: var(--amber); background: var(--amber-subtle) !important; }
+.day-cell.in-range { background: var(--amber-subtle) !important; }
+.day-cell.in-range.weekend { background: var(--amber-light) !important; }
+.day-number {
+  font-size: 0.75rem; font-weight: 500; display: block;
+  margin-bottom: var(--sp-1); line-height: 1; color: var(--text);
+}
+
+/* ========== Dots ========== */
+.day-dots { display: flex; flex-wrap: wrap; gap: 3px; align-items: center; }
+.dot {
+  width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+  display: inline-block; transition: transform 0.1s ease;
+}
+.dot:hover { transform: scale(1.4); }
+.dot-sick { background: #fff !important; border: 2px solid; box-sizing: border-box; }
+.dot-parental { border-radius: 1px; transform: rotate(45deg); width: 6px; height: 6px; }
+.dot-parental:hover { transform: rotate(45deg) scale(1.4); }
+.dot-ellipsis {
+  font-size: 9px; line-height: 7px; color: var(--text-disabled);
+  cursor: help; font-weight: 700; letter-spacing: -1px;
+}
+
+/* ========== Sidebar ========== */
+.sidebar {
+  background: var(--surface); border-radius: var(--r-xl);
+  padding: var(--sp-7); box-shadow: var(--shadow); border: 1px solid var(--border);
+}
+.sidebar h2 { font-size: 0.9375rem; font-weight: 600; margin-bottom: var(--sp-6); }
+.sidebar-subtitle {
+  font-size: 0.8125rem; font-weight: 600; margin: var(--sp-6) 0 var(--sp-5);
+  padding-top: var(--sp-6); border-top: 1px solid var(--border);
+}
+
+/* Summary Cards — clickable for member selection */
+.summary-card {
+  padding: var(--sp-5); border-radius: var(--r-lg);
+  border: 1px solid var(--border); margin-bottom: var(--sp-4);
+  transition: box-shadow var(--transition), background var(--transition);
+  cursor: pointer; position: relative;
+}
+.summary-card:hover:not(.selected) {
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-sm);
+}
+.summary-card.selected {
+  background: var(--surface-raised);
+  box-shadow: inset 3px 0 0 0 var(--mc, var(--border)), var(--shadow-sm);
+}
+.summary-header { display: flex; align-items: center; gap: var(--sp-4); margin-bottom: var(--sp-3); }
+.summary-color { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.summary-name { font-weight: 600; font-size: 0.8125rem; flex: 1; }
+.summary-total { font-size: 0.6875rem; color: var(--text-disabled); font-weight: 500; }
+.summary-row {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 0.75rem; padding: var(--sp-1) 0; color: var(--text-secondary);
+}
+.summary-bar {
+  height: 3px; border-radius: 2px; background: var(--border);
+  margin: var(--sp-1) 0 var(--sp-2); overflow: hidden;
+}
+.summary-bar-fill { height: 100%; border-radius: 2px; transition: width 0.4s ease; }
+.bar-low { background: var(--success); }
+.bar-warning { background: var(--warning); }
+.bar-danger { background: var(--error); }
+.text-low { color: var(--success); font-weight: 600; }
+.text-warning { color: var(--warning); font-weight: 600; }
+.text-danger { color: var(--error); font-weight: 600; }
+.text-neutral { color: var(--text-disabled); }
+
+/* Entry List */
+.entry-card {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: var(--sp-4) var(--sp-5); border: 1px solid var(--border);
+  border-radius: var(--r-md); margin-bottom: var(--sp-3);
+  font-size: 0.8125rem; transition: background var(--transition);
+}
+.entry-card:hover { background: var(--surface-raised); }
+.entry-type { font-weight: 600; display: block; }
+.entry-dates { color: var(--text-secondary); font-size: 0.6875rem; }
+.entry-delete {
+  flex-shrink: 0; width: 26px; height: 26px; padding: 0;
+  border-radius: 50%; font-size: 0.85rem;
+}
+.empty-state {
+  font-size: 0.8125rem; color: var(--text-disabled);
+  padding: var(--sp-6) 0; text-align: center;
+}
+
+/* ========== Admin ========== */
+.admin-mode {
+  background: var(--surface); border-radius: var(--r-xl);
+  padding: var(--sp-8); box-shadow: var(--shadow); border: 1px solid var(--border);
+}
+.admin-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--sp-2); }
+.admin-header h2 { font-size: 1.125rem; font-weight: 600; }
+.admin-desc { font-size: 0.8125rem; color: var(--text-secondary); margin-bottom: var(--sp-7); }
+.admin-card {
+  padding: var(--sp-6); border: 1px solid var(--border); border-radius: var(--r-lg);
+  margin-bottom: var(--sp-4); transition: box-shadow var(--transition);
+}
+.admin-card:hover { box-shadow: var(--shadow-sm); }
+.admin-card-row { display: flex; align-items: center; gap: var(--sp-5); flex-wrap: wrap; }
+.admin-color-trigger {
+  width: 28px; height: 28px; border-radius: 50%;
+  border: 3px solid var(--surface); box-shadow: 0 0 0 1px var(--border); flex-shrink: 0;
+  cursor: pointer; transition: transform 0.1s ease; padding: 0; outline: none;
+  position: relative;
+}
+.admin-color-trigger:hover { transform: scale(1.1); }
+.admin-field { display: flex; flex-direction: column; gap: var(--sp-1); }
+.admin-field label {
+  font-size: 0.625rem; font-weight: 700; color: var(--text-disabled);
+  text-transform: uppercase; letter-spacing: 0.06em;
+}
+.admin-input {
+  padding: var(--sp-3) var(--sp-4); border: 1px solid var(--border);
+  border-radius: var(--r-md); font-size: 0.8125rem; font-family: var(--font);
+  color: var(--text); background: var(--surface);
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+.admin-input:focus {
+  border-color: var(--amber); box-shadow: 0 0 0 3px var(--amber-light); outline: none;
+}
+.admin-input:disabled { background: var(--surface-raised); color: var(--text-disabled); }
+.admin-name-input { width: 160px; }
+.admin-num-input { width: 64px; }
+.admin-parental-group { display: flex; align-items: center; gap: var(--sp-3); }
+.admin-parental-group input[type="checkbox"] {
+  width: 16px; height: 16px; cursor: pointer; accent-color: var(--amber);
+}
+.admin-remove { margin-left: auto; }
+.admin-actions {
+  display: flex; gap: var(--sp-5); margin-top: var(--sp-7);
+  padding-top: var(--sp-6); border-top: 1px solid var(--border);
+}
+
+/* ========== Modal ========== */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(15,23,42,0.4);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 1000; opacity: 0; visibility: hidden;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+  backdrop-filter: blur(3px);
+}
+.modal-overlay.active { opacity: 1; visibility: visible; }
+.modal-content {
+  background: var(--surface); border-radius: var(--r-xl);
+  padding: var(--sp-8); max-width: 420px; width: 92%;
+  box-shadow: var(--shadow-lg); border: 1px solid var(--border);
+  transform: translateY(12px) scale(0.98);
+  transition: transform 0.2s ease;
+}
+.modal-overlay.active .modal-content { transform: translateY(0) scale(1); }
+.modal-title { font-size: 1.0625rem; font-weight: 600; margin-bottom: var(--sp-2); }
+.modal-subtitle {
+  font-size: 0.8125rem; color: var(--text-secondary);
+  margin-bottom: var(--sp-6); line-height: 1.5;
+}
+.modal-alert {
+  padding: var(--sp-4) var(--sp-5); border-radius: var(--r-md);
+  font-size: 0.8125rem; margin-bottom: var(--sp-5); display: none; line-height: 1.45;
+}
+.modal-alert.visible { display: block; }
+.modal-alert-error { background: var(--error-light); color: #991B1B; border: 1px solid #FECACA; }
+.modal-alert-warning { background: var(--warning-light); color: #9A3412; border: 1px solid #FED7AA; }
+.modal-options { display: flex; flex-direction: column; gap: var(--sp-4); margin-bottom: var(--sp-6); }
+.modal-option {
+  padding: var(--sp-5) var(--sp-6); border: 1px solid var(--border);
+  border-radius: var(--r-lg); background: var(--surface); cursor: pointer;
+  font-size: 0.875rem; text-align: left; transition: all var(--transition);
+  display: flex; align-items: center; gap: var(--sp-5);
+  font-family: var(--font); width: 100%;
+}
+.modal-option:hover:not(:disabled) { border-color: var(--amber); background: var(--amber-subtle); }
+.modal-option:disabled { opacity: 0.35; cursor: not-allowed; }
+.option-icon { font-size: 1.1rem; flex-shrink: 0; }
+.option-label { font-weight: 600; display: block; font-size: 0.8125rem; }
+.option-detail {
+  font-size: 0.6875rem; color: var(--text-secondary);
+  display: block; margin-top: var(--sp-1);
+}
+.option-detail.text-warning { color: var(--warning); }
+
+/* ========== Tooltip ========== */
+.tooltip {
+  position: fixed; background: var(--text); color: var(--surface-raised);
+  padding: var(--sp-4) var(--sp-5); border-radius: var(--r-md);
+  font-size: 0.75rem; max-width: 260px; pointer-events: none;
+  z-index: 500; opacity: 0; transition: opacity 0.12s ease;
+  line-height: 1.45; box-shadow: var(--shadow-lg);
+}
+.tooltip.visible { opacity: 1; }
+.tooltip-title { font-weight: 600; margin-bottom: var(--sp-2); font-size: 0.75rem; }
+.tooltip-row { display: flex; align-items: center; gap: var(--sp-3); padding: 1px 0; }
+.tooltip-color { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+
+/* ========== Sync Status ========== */
+.sync-status {
+  font-size: 0.6875rem; font-weight: 500; padding: var(--sp-2) var(--sp-4);
+  border-radius: var(--r-sm); white-space: nowrap;
+  transition: all var(--transition);
+}
+.sync-ok { color: var(--success); background: var(--success-light); }
+.sync-busy { color: var(--amber); background: var(--amber-subtle); }
+.sync-warn { color: var(--warning); background: var(--warning-light); }
+.sync-info { color: #0369A1; background: #F0F9FF; }
+
+/* ========== Responsive ========== */
+@media (max-width: 820px) {
+  .user-mode { grid-template-columns: 1fr; }
+  .header { padding: var(--sp-5) var(--sp-6); }
+  .main { padding: var(--sp-6); }
+  .calendar { padding: var(--sp-6); }
+  .day-cell { min-height: 54px; padding: var(--sp-1) var(--sp-2); }
+  .day-cell.weekend { min-height: 42px; }
+  .day-number { font-size: 0.6875rem; }
+  .dot { width: 6px; height: 6px; }
+  .dot-parental { width: 5px; height: 5px; }
+}
+@media (max-width: 480px) {
+  .header-brand h1 { font-size: 1.1rem; }
+  .header-controls { gap: var(--sp-4); }
+  .active-user-name { max-width: 80px; }
+  .btn { padding: var(--sp-3) var(--sp-5); font-size: 0.75rem; }
+  .calendar { padding: var(--sp-4); }
+  .day-cell { min-height: 44px; padding: var(--sp-1); }
+  .day-cell.weekend { min-height: 36px; }
+  .admin-name-input { width: 120px; }
+  .onboarding { padding: var(--sp-6); }
+  .onboarding-card { padding: var(--sp-8) var(--sp-7); }
+}
+</style>
+</head>
+<body>
+
+<a href="#main" class="skip-link">Skip to main content</a>
+
+<!-- ===== Onboarding ===== -->
+<div id="onboarding" class="onboarding" role="region" aria-label="Team setup">
+  <div class="onboarding-card">
+    <div class="onboarding-logo">
+      <svg viewBox="0 0 32 32" width="32" height="32" fill="none" aria-hidden="true">
+        <ellipse cx="16" cy="20" rx="5" ry="7" fill="#1E293B"/>
+        <rect x="11" y="19" width="10" height="1.5" rx=".75" fill="#D97706"/>
+        <rect x="11.5" y="22" width="9" height="1.5" rx=".75" fill="#D97706"/>
+        <path d="M13 14c-3-5.5-7-4.5-6-1.5s4 4.5 6 1.5z" fill="#CBD5E1"/>
+        <path d="M19 14 L17 8 L24 4" stroke="#D97706" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <h1>Sa<span>bee</span></h1>
+    </div>
+    <p class="onboarding-welcome">Set up your team</p>
+    <p class="onboarding-desc">Add the people on your team. You can always change this later in the admin panel.</p>
+
+    <label class="onboarding-label" for="ob-name-input">Add a team member</label>
+    <div class="onboarding-add-row">
+      <input id="ob-name-input" class="onboarding-input" type="text" placeholder="e.g. Anna" maxlength="40" aria-label="Team member name">
+      <button id="ob-add-btn" class="btn btn-secondary">Add</button>
+    </div>
+    <div id="ob-error" class="onboarding-error" role="alert"></div>
+
+    <div id="ob-members" class="onboarding-members">
+      <p class="onboarding-empty">No team members added yet.</p>
+    </div>
+
+    <span id="ob-count" class="onboarding-count"></span>
+    <button id="ob-start-btn" class="btn btn-primary onboarding-start" disabled>Start using Sabee →</button>
+  </div>
+</div>
+
+<!-- ===== App ===== -->
+<div id="app-wrap" class="app-wrap">
+  <header class="header" role="banner">
+    <div class="header-brand">
+      <svg class="logo-icon" viewBox="0 0 32 32" width="28" height="28" fill="none" aria-hidden="true">
+        <ellipse cx="16" cy="20" rx="5" ry="7" fill="#1E293B"/>
+        <rect x="11" y="19" width="10" height="1.5" rx=".75" fill="#D97706"/>
+        <rect x="11.5" y="22" width="9" height="1.5" rx=".75" fill="#D97706"/>
+        <path d="M13 14c-3-5.5-7-4.5-6-1.5s4 4.5 6 1.5z" fill="#CBD5E1"/>
+        <path d="M19 14 L17 8 L24 4" stroke="#D97706" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <div class="brand-text">
+        <h1>Sa<span>bee</span></h1>
+        <span class="version">beta v5.2.1</span>
+      </div>
+    </div>
+    <div class="header-controls">
+      <div class="active-user" id="active-user">
+        <span class="user-color-dot" id="user-color-dot"></span>
+        <span class="active-user-name" id="active-user-name"></span>
+      </div>
+      <button id="admin-toggle" class="btn btn-secondary" aria-label="Toggle admin mode">⚙ Admin</button>
+      <span id="sync-status" class="sync-status sync-ok" aria-live="polite">✓ Synced</span>
+    </div>
+  </header>
+
+  <main id="main" class="main">
+    <div id="user-mode" class="user-mode">
+      <section class="calendar" aria-label="Calendar">
+        <div class="calendar-nav">
+          <button id="prev-month" class="btn btn-ghost nav-btn" aria-label="Previous month">‹</button>
+          <h2 id="month-title"></h2>
+          <button id="next-month" class="btn btn-ghost nav-btn" aria-label="Next month">›</button>
+        </div>
+        <div class="calendar-weekdays" role="row" aria-label="Days of week">
+          <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span>
+          <span>Fri</span><span>Sat</span><span>Sun</span>
+        </div>
+        <div id="calendar-days" class="calendar-grid" role="grid" aria-label="Calendar days"></div>
+        <div id="selection-status" class="selection-status hidden" role="status">
+          <span id="selection-text"></span>
+          <button id="selection-cancel" class="btn btn-ghost btn-sm">✕ Cancel</button>
+        </div>
+      </section>
+
+      <aside class="sidebar" aria-label="Team summary">
+        <h2>Team Summary</h2>
+        <div id="summary-list"></div>
+        <h3 id="entries-title" class="sidebar-subtitle">Your Days Off</h3>
+        <div id="entries-list"></div>
+      </aside>
+    </div>
+
+    <div id="admin-mode" class="admin-mode hidden" role="region" aria-label="Team management">
+      <div class="admin-header"><h2>Team Management</h2></div>
+      <p class="admin-desc">Add, edit, or remove team members. Changes take effect only when you press Save.</p>
+      <div id="admin-members"></div>
+      <button id="admin-add-btn" class="btn btn-secondary" style="margin-top:var(--sp-5)">+ Add Member</button>
+      <div class="admin-actions">
+        <button id="admin-save-btn" class="btn btn-primary">Save Changes</button>
+        <button id="admin-discard-btn" class="btn btn-secondary">Discard</button>
+        <button id="admin-reset-btn" class="btn btn-danger" style="margin-left:auto">⚠ Reset All Data</button>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- ===== Day Off Modal ===== -->
+<div id="modal-overlay" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div id="modal-content" class="modal-content">
+    <h3 id="modal-title" class="modal-title">Log Days Off</h3>
+    <p class="modal-subtitle">
+      <strong id="modal-member"></strong> &middot; <span id="modal-dates"></span>
+    </p>
+    <div id="modal-error" class="modal-alert modal-alert-error" role="alert"></div>
+    <div id="modal-warning" class="modal-alert modal-alert-warning" role="status"></div>
+    <div class="modal-options">
+      <button id="modal-btn-pto" class="modal-option">
+        <span class="option-icon">🏖️</span>
+        <div><span class="option-label">Paid Time Off</span><span class="option-detail" id="modal-detail-pto"></span></div>
+      </button>
+      <button id="modal-btn-sick" class="modal-option">
+        <span class="option-icon">🤒</span>
+        <div><span class="option-label">Sick Leave</span><span class="option-detail" id="modal-detail-sick"></span></div>
+      </button>
+      <button id="modal-btn-parental" class="modal-option">
+        <span class="option-icon">👶</span>
+        <div><span class="option-label">Parental Leave</span><span class="option-detail" id="modal-detail-parental"></span></div>
+      </button>
+    </div>
+    <button id="modal-cancel" class="btn btn-ghost" style="width:100%;justify-content:center">Cancel</button>
+  </div>
+</div>
+
+<div id="tooltip" class="tooltip" role="tooltip" aria-hidden="true"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  const STORAGE_KEY = 'sabee-data';
+  const PALETTE = [
+    '#EF4444','#F97316','#F43F5E','#84CC16','#22C55E',
+    '#10B981','#14B8A6','#06B6D4','#0EA5E9','#3B82F6',
+    '#6366F1','#8B5CF6','#A855F7','#D946EF','#EC4899'
+  ];
+  const MONTHS = ['January','February','March','April','May','June',
+    'July','August','September','October','November','December'];
+  const TYPE_LABEL = { pto:'Paid Time Off', sick:'Sick Leave', parental:'Parental Leave' };
+  const TYPE_ICON  = { pto:'🏖️', sick:'🤒', parental:'👶' };
+  const DEFAULT_MAX_PTO = 25;
+
+  let S = {
+    members: [], daysOff: [],
+    month: { y: new Date().getFullYear(), m: new Date().getMonth() },
+    selId: null, pickStart: null, hoverDate: null,
+    admin: false, draft: null, draftDirty: false,
+    modalRange: null, prevFocus: null
+  };
+
+  let OB = { members: [] };
+
+  /* ============================================================ */
+  let _id = Date.now();
+  const uid   = ()      => 'u' + (_id++).toString(36);
+  const esc   = s       => { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; };
+  const $     = id      => document.getElementById(id);
+  const dstr  = (y,m,d) => `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+  const pdate = s       => { const [y,m,d]=s.split('-').map(Number); return new Date(y,m-1,d); };
+  const today = ()      => { const n=new Date(); return dstr(n.getFullYear(),n.getMonth(),n.getDate()); };
+  const dmin  = (a,b)   => a<=b?a:b;
+  const dmax  = (a,b)   => a>=b?a:b;
+  const dim   = (y,m)   => new Date(y,m+1,0).getDate();
+  const sdow  = (y,m)   => (new Date(y,m,1).getDay()+6)%7;
+  const dspan = (a,b)   => Math.round((pdate(b)-pdate(a))/864e5)+1;
+  const fmtS  = s       => pdate(s).toLocaleDateString('en-US',{month:'short',day:'numeric'});
+  const fmtL  = s       => pdate(s).toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+
+  const member   = id => S.members.find(m=>m.id===id);
+  const entFor   = ds => S.daysOff.filter(e=>ds>=e.s&&ds<=e.e);
+  const usedDays = (mid,t) => S.daysOff.filter(e=>e.mid===mid&&(!t||e.t===t)).reduce((n,e)=>n+dspan(e.s,e.e),0);
+  const overlap  = (mid,s,e,xid) => S.daysOff.some(en=> en.mid===mid && en.id!==xid && s<=en.e && e>=en.s);
+  const nextColor = list => { const used=new Set(list.map(m=>m.color)); return PALETTE.find(c=>!used.has(c))||PALETTE[list.length%PALETTE.length]; };
+
+  function statusCls(used,max) {
+    if(!max||max<=0) return 'neutral';
+    const r=used/max;
+    return r>=0.9?'danger':r>=0.7?'warning':'low';
+  }
+
+  /* ============================================================
+     COLOR POPOVER — shared helper
+     ============================================================ */
+  let activePopover = null; // track the currently open popover element
+
+  function buildSwatchesHTML(currentColor, contextPrefix, index) {
+    return PALETTE.map(clr =>
+      `<button type="button" class="color-swatch${clr===currentColor?' active':''}"
+        style="background:${clr}" data-ctx="${contextPrefix}" data-i="${index}" data-color="${clr}"
+        aria-label="Color ${clr}${clr===currentColor?' (selected)':''}"></button>`
+    ).join('');
+  }
+
+  function closeAllPopovers() {
+    document.querySelectorAll('.color-popover.open').forEach(p => p.classList.remove('open'));
+    activePopover = null;
+  }
+
+  function togglePopover(triggerEl) {
+    const popover = triggerEl.querySelector('.color-popover') || triggerEl.nextElementSibling;
+    if(!popover || !popover.classList.contains('color-popover')) return;
+    if(popover.classList.contains('open')) {
+      popover.classList.remove('open');
+      activePopover = null;
+    } else {
+      closeAllPopovers();
+      popover.classList.add('open');
+      activePopover = popover;
+      // Focus first swatch
+      const first = popover.querySelector('.color-swatch');
+      if(first) setTimeout(()=>first.focus(), 50);
+    }
+  }
+
+  // Global click-outside handler
+  document.addEventListener('click', e => {
+    if(activePopover && !e.target.closest('.color-popover-anchor') && !e.target.closest('.color-popover')) {
+      closeAllPopovers();
+    }
+  });
+
+  document.addEventListener('keydown', e => {
+    if(e.key === 'Escape' && activePopover) {
+      closeAllPopovers();
+    }
+  });
+
+  /* ============================================================
+     PERSISTENCE — API + localStorage fallback
+     ============================================================ */
+  const API = '/api/data';
+  let _lastTs = 0;        // server timestamp of last known state
+  let _saving = false;     // debounce guard
+  let _pollTimer = null;
+
+  async function save() {
+    // Always save locally first (instant, works offline)
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        members: S.members, daysOff: S.daysOff, _ts: _lastTs
+      }));
+    } catch(e) { /* localStorage full or unavailable */ }
+
+    // Then sync to server
+    if(_saving) return;
+    _saving = true;
+    try {
+      const res = await fetch(API, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          members: S.members,
+          daysOff: S.daysOff,
+          _ts: _lastTs
+        })
+      });
+      if(res.ok) {
+        const body = await res.json();
+        _lastTs = body._ts || Date.now();
+        setSyncStatus('saved');
+        if(body.conflict) {
+          setSyncStatus('conflict');
+          // Auto-refresh to get latest
+          setTimeout(()=> poll(), 800);
+        }
+      } else {
+        setSyncStatus('offline');
+      }
+    } catch(e) {
+      console.warn('API save failed, data is in localStorage', e);
+      setSyncStatus('offline');
+    } finally {
+      _saving = false;
+    }
+  }
+
+  async function load() {
+    // Try API first
+    try {
+      const res = await fetch(API);
+      if(res.ok) {
+        const data = await res.json();
+        if(data && Array.isArray(data.members) && data.members.length) {
+          S.members = data.members;
+          S.daysOff = (data.daysOff||[]).map(e=>({...e}));
+          S.selId = S.members[0].id;
+          _lastTs = data._ts || 0;
+          // Mirror to localStorage
+          try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch(_){}
+          setSyncStatus('saved');
+          startPolling();
+          return true;
+        }
+      }
+    } catch(e) {
+      console.warn('API load failed, trying localStorage', e);
+      setSyncStatus('offline');
+    }
+
+    // Fallback to localStorage
+    try {
+      const d = JSON.parse(localStorage.getItem(STORAGE_KEY));
+      if(d && Array.isArray(d.members) && d.members.length) {
+        S.members = d.members;
+        S.daysOff = (d.daysOff||[]).map(e=>({...e}));
+        S.selId = S.members[0].id;
+        _lastTs = d._ts || 0;
+        startPolling();
+        return true;
+      }
+    } catch(e) { console.error('localStorage load failed', e); }
+    return false;
+  }
+
+  // --- Polling: check for changes from other users ---
+  async function poll() {
+    try {
+      const res = await fetch(API);
+      if(!res.ok) return;
+      const data = await res.json();
+      if(data._ts && data._ts > _lastTs) {
+        // Server has newer data — update
+        _lastTs = data._ts;
+        const oldSelId = S.selId;
+        S.members = data.members || [];
+        S.daysOff = (data.daysOff||[]).map(e=>({...e}));
+        // Preserve selected member if still exists
+        if(!S.members.find(m=>m.id===oldSelId)) {
+          S.selId = S.members.length ? S.members[0].id : null;
+        }
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch(_){}
+        setSyncStatus('updated');
+        if(!S.admin) render();  // Don't overwrite admin draft
+        setTimeout(()=> setSyncStatus('saved'), 2000);
+      }
+    } catch(_) { /* silent — next poll will try again */ }
+  }
+
+  function startPolling() {
+    if(_pollTimer) clearInterval(_pollTimer);
+    _pollTimer = setInterval(poll, 5000);  // every 5 seconds
+  }
+
+  // --- Sync status indicator ---
+  function setSyncStatus(status) {
+    const el = document.getElementById('sync-status');
+    if(!el) return;
+    const map = {
+      saved:    { text: '✓ Synced',            cls: 'sync-ok' },
+      saving:   { text: '↑ Saving…',           cls: 'sync-busy' },
+      offline:  { text: '⚡ Offline — local only', cls: 'sync-warn' },
+      conflict: { text: '↻ Newer data found…', cls: 'sync-warn' },
+      updated:  { text: '↓ Updated from team', cls: 'sync-info' }
+    };
+    const s = map[status] || map.saved;
+    el.textContent = s.text;
+    el.className = 'sync-status ' + s.cls;
+  }
+
+  /* ============================================================
+     ONBOARDING
+     ============================================================ */
+  function showOnboarding() {
+    OB.members = [];
+    $('onboarding').classList.remove('hidden');
+    $('app-wrap').classList.remove('active');
+    renderOnboarding();
+    setTimeout(()=>$('ob-name-input').focus(), 100);
+  }
+
+  function renderOnboarding() {
+    const list = $('ob-members');
+    if(!OB.members.length) {
+      list.innerHTML = '<p class="onboarding-empty">No team members added yet.</p>';
+    } else {
+      list.innerHTML = OB.members.map((m,i) =>
+        `<div class="onboarding-member">
+          <div class="color-popover-anchor">
+            <span class="onboarding-member-color" style="background:${m.color}"
+              data-ctx="ob" data-i="${i}" role="button" tabindex="0"
+              aria-label="Change color for ${esc(m.name)}"></span>
+            <div class="color-popover" aria-label="Choose color">${buildSwatchesHTML(m.color, 'ob', i)}</div>
+          </div>
+          <span class="onboarding-member-name">${esc(m.name)}</span>
+          <button class="btn btn-ghost onboarding-member-remove" data-i="${i}" aria-label="Remove ${esc(m.name)}">✕</button>
+        </div>`
+      ).join('');
+    }
+    const n = OB.members.length;
+    $('ob-count').textContent = n ? `${n} member${n>1?'s':''} added` : '';
+    $('ob-start-btn').disabled = n < 1;
+  }
+
+  function obAdd() {
+    const inp = $('ob-name-input');
+    const name = inp.value.trim();
+    const err = $('ob-error');
+    err.classList.remove('visible');
+
+    if(!name) {
+      err.textContent = 'Please enter a name.';
+      err.classList.add('visible');
+      inp.focus(); return;
+    }
+    if(OB.members.some(m => m.name.toLowerCase() === name.toLowerCase())) {
+      err.textContent = 'This name is already in the list.';
+      err.classList.add('visible');
+      inp.focus(); return;
+    }
+    OB.members.push({ name, color: nextColor(OB.members) });
+    inp.value = '';
+    renderOnboarding();
+    inp.focus();
+  }
+
+  function obRemove(i) {
+    OB.members.splice(i, 1);
+    OB.members.forEach((m,idx) => { m.color = PALETTE[idx % PALETTE.length]; });
+    renderOnboarding();
+  }
+
+  function obStart() {
+    if(!OB.members.length) return;
+    S.members = OB.members.map(m => ({
+      id: uid(), name: m.name, color: m.color,
+      maxPTO: DEFAULT_MAX_PTO, maxParental: 0
+    }));
+    S.daysOff = [];
+    S.selId = S.members[0].id;
+    save();
+    startPolling();
+
+    $('onboarding').classList.add('hidden');
+    $('app-wrap').classList.add('active');
+    bindApp();
+    render();
+  }
+
+  function bindOnboarding() {
+    $('ob-add-btn').addEventListener('click', obAdd);
+    $('ob-name-input').addEventListener('keydown', e => {
+      if(e.key === 'Enter') { e.preventDefault(); obAdd(); }
+    });
+    $('ob-members').addEventListener('click', e => {
+      // Remove button
+      const btn = e.target.closest('.onboarding-member-remove');
+      if(btn) { obRemove(parseInt(btn.dataset.i)); return; }
+
+      // Color dot trigger
+      const dot = e.target.closest('.onboarding-member-color');
+      if(dot) { e.stopPropagation(); togglePopover(dot.parentElement); return; }
+
+      // Swatch click
+      const swatch = e.target.closest('.color-swatch[data-ctx="ob"]');
+      if(swatch) {
+        const i = parseInt(swatch.dataset.i);
+        const clr = swatch.dataset.color;
+        if(!isNaN(i) && OB.members[i] && clr) {
+          OB.members[i].color = clr;
+          closeAllPopovers();
+          renderOnboarding();
+        }
+        return;
+      }
+    });
+    $('ob-members').addEventListener('keydown', e => {
+      const dot = e.target.closest('.onboarding-member-color');
+      if(dot && (e.key === 'Enter' || e.key === ' ')) {
+        e.preventDefault(); e.stopPropagation();
+        togglePopover(dot.parentElement);
+      }
+    });
+    $('ob-start-btn').addEventListener('click', obStart);
+  }
+
+  /* ============================================================
+     RENDER — MASTER
+     ============================================================ */
+  function render() {
+    renderHeader();
+    if(S.admin) {
+      $('user-mode').classList.add('hidden');
+      $('admin-mode').classList.remove('hidden');
+      renderAdmin();
+    } else {
+      $('admin-mode').classList.add('hidden');
+      $('user-mode').classList.remove('hidden');
+      renderCalendar();
+      renderSidebar();
+      renderEntries();
+    }
+  }
+
+  function renderHeader() {
+    const m = member(S.selId);
+    $('user-color-dot').style.background = m ? m.color : '#ccc';
+    $('active-user-name').textContent = m ? m.name : '';
+    $('active-user').classList.toggle('hidden', S.admin);
+    $('admin-toggle').textContent = S.admin ? '← Calendar' : '⚙ Admin';
+  }
+
+  function renderCalendar() {
+    const {y,m} = S.month;
+    $('month-title').textContent = `${MONTHS[m]} ${y}`;
+    const days = dim(y,m), start = sdow(y,m), td = today();
+    const prevDays = dim(m===0?y-1:y, m===0?11:m-1);
+    let h = '';
+    for(let i=0;i<start;i++){
+      const d = prevDays-start+1+i;
+      h += `<div class="day-cell other-month" aria-hidden="true"><span class="day-number">${d}</span></div>`;
+    }
+    for(let d=1;d<=days;d++){
+      const ds = dstr(y,m,d);
+      const dt = new Date(y,m,d);
+      const wk = dt.getDay()===0||dt.getDay()===6;
+      const t  = ds===td;
+      const ss = S.pickStart===ds;
+      let ir = false;
+      if(S.pickStart && S.hoverDate && !S.modalRange){
+        const rs=dmin(S.pickStart,S.hoverDate), re=dmax(S.pickStart,S.hoverDate);
+        ir = ds>=rs && ds<=re;
+      }
+      const cls = ['day-cell','cm', wk?'weekend':'', t?'today':'', ss?'selection-start':'', ir?'in-range':''].filter(Boolean).join(' ');
+      const entries = entFor(ds);
+      h += `<div class="${cls}" data-d="${ds}" role="gridcell" tabindex="0"
+            aria-label="${fmtL(ds)}${entries.length?'. '+entries.length+' day(s) off logged':''}">
+            <span class="day-number">${d}</span>
+            <div class="day-dots">${renderDots(entries)}</div></div>`;
+    }
+    const tot = start+days, rem = (7-tot%7)%7;
+    for(let i=1;i<=rem;i++){
+      h += `<div class="day-cell other-month" aria-hidden="true"><span class="day-number">${i}</span></div>`;
+    }
+    $('calendar-days').innerHTML = h;
+    updateSelectionStatus();
+  }
+
+  function renderDots(entries) {
+    if(!entries.length) return '';
+    const MAX = 7;
+    let show = entries, extra = false;
+    if(entries.length > MAX){ show = entries.slice(0,MAX-1); extra = true; }
+    let h = show.map(e=>{
+      const m = member(e.mid);
+      if(!m) return '';
+      if(e.t==='sick')
+        return `<span class="dot dot-sick" style="border-color:${m.color}" aria-label="${esc(m.name)}: Sick Leave"></span>`;
+      if(e.t==='parental')
+        return `<span class="dot dot-parental" style="background:${m.color}" aria-label="${esc(m.name)}: Parental Leave"></span>`;
+      return `<span class="dot" style="background:${m.color}" aria-label="${esc(m.name)}: PTO"></span>`;
+    }).join('');
+    if(extra){
+      const r = entries.length - (MAX-1);
+      h += `<span class="dot-ellipsis" title="+${r} more" aria-label="${r} more entries">…</span>`;
+    }
+    return h;
+  }
+
+  function updateSelectionStatus() {
+    const box = $('selection-status');
+    if(S.pickStart && !S.modalRange){
+      box.classList.remove('hidden');
+      $('selection-text').textContent = `Start: ${fmtS(S.pickStart)} — click another day to complete`;
+    } else {
+      box.classList.add('hidden');
+    }
+  }
+
+  function updateRangeHighlight() {
+    document.querySelectorAll('.day-cell.cm').forEach(cell=>{
+      const ds = cell.dataset.d;
+      cell.classList.remove('in-range');
+      if(S.pickStart && S.hoverDate && !S.modalRange){
+        const rs=dmin(S.pickStart,S.hoverDate), re=dmax(S.pickStart,S.hoverDate);
+        if(ds>=rs && ds<=re) cell.classList.add('in-range');
+      }
+    });
+  }
+
+  /* ============================================================
+     RENDER — SIDEBAR (clickable member selection)
+     ============================================================ */
+  function renderSidebar() {
+    if(!S.members.length){ $('summary-list').innerHTML='<p class="empty-state">No team members.</p>'; return; }
+
+    $('summary-list').innerHTML = S.members.map(m=>{
+      const isSel = m.id === S.selId;
+      const pto = usedDays(m.id,'pto');
+      const sick = usedDays(m.id,'sick');
+      const par = usedDays(m.id,'parental');
+      const tot = pto+sick+par;
+      const ps = statusCls(pto,m.maxPTO);
+      let parHtml = '';
+      if(m.maxParental>0){
+        const xs = statusCls(par,m.maxParental);
+        parHtml = `
+          <div class="summary-row"><span>👶 Parental</span><span class="text-${xs}">${par} / ${m.maxParental}d</span></div>
+          <div class="summary-bar"><div class="summary-bar-fill bar-${xs}" style="width:${Math.min(100,par/m.maxParental*100)}%"></div></div>`;
+      }
+      return `<div class="summary-card${isSel?' selected':''}" data-mid="${m.id}"
+        style="--mc:${m.color}" role="button" tabindex="0"
+        aria-pressed="${isSel}" aria-label="Select ${esc(m.name)}">
+        <div class="summary-header">
+          <span class="summary-color" style="background:${m.color}"></span>
+          <span class="summary-name">${esc(m.name)}</span>
+          <span class="summary-total">${tot}d total</span>
+        </div>
+        <div class="summary-row"><span>🏖️ PTO</span><span class="text-${ps}">${pto} / ${m.maxPTO}d</span></div>
+        <div class="summary-bar"><div class="summary-bar-fill bar-${ps}" style="width:${Math.min(100,pto/m.maxPTO*100)}%"></div></div>
+        <div class="summary-row"><span>🤒 Sick</span><span class="text-neutral">${sick}d</span></div>
+        ${parHtml}
+      </div>`;
+    }).join('');
+  }
+
+  /* ============================================================
+     RENDER — ENTRIES LIST
+     ============================================================ */
+  function renderEntries() {
+    const m = member(S.selId);
+    $('entries-title').textContent = m ? `${esc(m.name)}'s Days Off` : 'Days Off';
+    const list = S.daysOff.filter(e=>e.mid===S.selId).sort((a,b)=>a.s.localeCompare(b.s));
+    if(!list.length){ $('entries-list').innerHTML='<p class="empty-state">No days off logged yet.</p>'; return; }
+
+    $('entries-list').innerHTML = list.map(e=>{
+      const d = dspan(e.s,e.e);
+      const lbl = e.s===e.e ? fmtS(e.s) : `${fmtS(e.s)} – ${fmtS(e.e)}`;
+      return `<div class="entry-card">
+        <div><span class="entry-type">${TYPE_ICON[e.t]} ${TYPE_LABEL[e.t]}</span>
+        <span class="entry-dates">${lbl} (${d}d)</span></div>
+        <button class="btn btn-ghost entry-delete" data-eid="${e.id}" aria-label="Delete entry: ${TYPE_LABEL[e.t]}, ${lbl}">✕</button>
+      </div>`;
+    }).join('');
+  }
+
+  /* ============================================================
+     RENDER — ADMIN (with color dot popover)
+     ============================================================ */
+  function renderAdmin() {
+    if(!S.draft) return;
+    const c = $('admin-members');
+    if(!S.draft.members.length){ c.innerHTML='<p class="empty-state">No members yet. Add someone!</p>'; return; }
+
+    c.innerHTML = S.draft.members.map((m,i)=>{
+      const pe = m.maxParental > 0;
+      return `<div class="admin-card">
+        <div class="admin-card-row">
+          <div class="color-popover-anchor">
+            <button type="button" class="admin-color-trigger" style="background:${m.color}"
+              data-ctx="admin" data-i="${i}"
+              aria-label="Change color for ${esc(m.name)}"></button>
+            <div class="color-popover" aria-label="Choose color">${buildSwatchesHTML(m.color, 'admin', i)}</div>
+          </div>
+          <div class="admin-field">
+            <label for="an${i}">Name</label>
+            <input id="an${i}" type="text" class="admin-input admin-name-input" data-i="${i}" value="${esc(m.name)}" aria-label="Member name">
+          </div>
+          <div class="admin-field">
+            <label for="ap${i}">Max PTO</label>
+            <input id="ap${i}" type="number" class="admin-input admin-num-input" data-i="${i}" data-f="maxPTO" value="${m.maxPTO}" min="0" max="365" aria-label="Max PTO days">
+          </div>
+          <div class="admin-field">
+            <label>Parental Leave</label>
+            <div class="admin-parental-group">
+              <input type="checkbox" id="apt${i}" data-i="${i}" ${pe?'checked':''} aria-label="Enable parental leave">
+              <input id="apd${i}" type="number" class="admin-input admin-num-input" data-i="${i}" data-f="maxParental"
+                value="${pe?m.maxParental:''}" min="1" max="365" ${pe?'':'disabled'} placeholder="days" aria-label="Max parental days">
+            </div>
+          </div>
+          <button class="btn btn-danger btn-sm admin-remove" data-i="${i}" aria-label="Remove ${esc(m.name)}">✕</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  /* ============================================================
+     MODAL
+     ============================================================ */
+  function openModal(a,b) {
+    const s = dmin(a,b), e = dmax(a,b);
+    S.modalRange = {s,e};
+    const m = member(S.selId);
+    if(!m) return;
+    const d = dspan(s,e);
+    $('modal-member').textContent = m.name;
+    $('modal-dates').textContent = s===e ? `${fmtS(s)} (1 day)` : `${fmtS(s)} – ${fmtS(e)} (${d} days)`;
+    const err = $('modal-error'), warn = $('modal-warning');
+    err.classList.remove('visible'); warn.classList.remove('visible');
+    if(overlap(m.id,s,e)){
+      err.textContent = `${m.name} already has overlapping days off in this range. Remove the existing entry first.`;
+      err.classList.add('visible');
+      $('modal-btn-pto').disabled = $('modal-btn-sick').disabled = $('modal-btn-parental').disabled = true;
+    } else {
+      const pu = usedDays(m.id,'pto'), pn = pu+d;
+      $('modal-detail-pto').textContent = `${pu}/${m.maxPTO} used → ${pn}/${m.maxPTO}`;
+      $('modal-detail-pto').className = 'option-detail' + (pn>m.maxPTO?' text-warning':'');
+      $('modal-btn-pto').disabled = false;
+      const su = usedDays(m.id,'sick');
+      $('modal-detail-sick').textContent = `${su} used → ${su+d}`;
+      $('modal-detail-sick').className = 'option-detail';
+      $('modal-btn-sick').disabled = false;
+      if(m.maxParental > 0){
+        const lu = usedDays(m.id,'parental'), ln = lu+d;
+        $('modal-detail-parental').textContent = `${lu}/${m.maxParental} used → ${ln}/${m.maxParental}`;
+        $('modal-detail-parental').className = 'option-detail' + (ln>m.maxParental?' text-warning':'');
+        $('modal-btn-parental').disabled = false;
+      } else {
+        $('modal-detail-parental').textContent = 'Not enabled for this member';
+        $('modal-detail-parental').className = 'option-detail';
+        $('modal-btn-parental').disabled = true;
+      }
+      const warnings = [];
+      if(pu+d > m.maxPTO) warnings.push(`PTO would be ${pu+d}/${m.maxPTO} (over limit)`);
+      if(m.maxParental>0 && usedDays(m.id,'parental')+d>m.maxParental)
+        warnings.push(`Parental would be ${usedDays(m.id,'parental')+d}/${m.maxParental} (over limit)`);
+      if(warnings.length){ warn.innerHTML='⚠️ '+warnings.join('<br>'); warn.classList.add('visible'); }
+    }
+    $('modal-overlay').classList.add('active');
+    S.prevFocus = document.activeElement;
+    const first = $('modal-content').querySelector('button:not(:disabled)');
+    if(first) setTimeout(()=>first.focus(),50);
+  }
+
+  function closeModal() {
+    S.modalRange = null; S.pickStart = null; S.hoverDate = null;
+    $('modal-overlay').classList.remove('active');
+    if(S.prevFocus){ S.prevFocus.focus(); S.prevFocus=null; }
+    renderCalendar();
+  }
+
+  function confirmType(type) {
+    if(!S.modalRange || !S.selId) return;
+    const m = member(S.selId);
+    if(!m) return;
+    const {s,e} = S.modalRange;
+    if(overlap(m.id,s,e)) return;
+    if(type==='parental' && m.maxParental<=0) return;
+    S.daysOff.push({ id:uid(), mid:m.id, s, e, t:type });
+    save(); closeModal(); render();
+  }
+
+  /* ============================================================
+     TOOLTIP
+     ============================================================ */
+  function showTooltip(el, ds) {
+    const entries = entFor(ds);
+    if(!entries.length){ hideTooltip(); return; }
+    const tip = $('tooltip');
+    tip.innerHTML = `<div class="tooltip-title">${fmtS(ds)}</div>` +
+      entries.map(e=>{
+        const m = member(e.mid);
+        if(!m) return '';
+        return `<div class="tooltip-row"><span class="tooltip-color" style="background:${m.color}"></span>${esc(m.name)} — ${TYPE_LABEL[e.t]}</div>`;
+      }).join('');
+    tip.classList.add('visible');
+    const r = el.getBoundingClientRect();
+    let top = r.top - tip.offsetHeight - 8;
+    let left = r.left + r.width/2 - tip.offsetWidth/2;
+    if(top<4) top = r.bottom + 8;
+    if(left<4) left = 4;
+    if(left+tip.offsetWidth > window.innerWidth-4) left = window.innerWidth - tip.offsetWidth - 4;
+    tip.style.top = top+'px'; tip.style.left = left+'px';
+  }
+  function hideTooltip(){ $('tooltip').classList.remove('visible'); }
+
+  /* ============================================================
+     EVENT HANDLERS
+     ============================================================ */
+  function onDayClick(ds) {
+    if(S.admin) return;
+    if(!S.pickStart){ S.pickStart = ds; renderCalendar(); }
+    else { openModal(S.pickStart, ds); }
+  }
+
+  function navMonth(delta) {
+    let {y,m} = S.month;
+    m += delta;
+    if(m<0){m=11;y--;} if(m>11){m=0;y++;}
+    S.month = {y,m}; S.hoverDate = null;
+    renderCalendar();
+  }
+
+  function toggleAdmin() {
+    if(S.admin){
+      if(S.draftDirty && !confirm('You have unsaved changes. Discard?')) return;
+      S.admin = false; S.draft = null; S.draftDirty = false;
+    } else {
+      S.admin = true;
+      S.draft = { members:JSON.parse(JSON.stringify(S.members)), removedIds:[] };
+      S.draftDirty = false; S.pickStart = null; S.hoverDate = null;
+    }
+    closeAllPopovers();
+    render();
+  }
+
+  function adminSave() {
+    if(!S.draft) return;
+    if(S.draft.members.some(m=>!m.name.trim())){ alert('All members must have a name.'); return; }
+    const names = S.draft.members.map(m=>m.name.trim().toLowerCase());
+    if(new Set(names).size !== names.length){ alert('Member names must be unique.'); return; }
+    S.members = S.draft.members;
+    S.draft.removedIds.forEach(rid=>{ S.daysOff = S.daysOff.filter(e=>e.mid!==rid); });
+    if(!S.members.find(m=>m.id===S.selId)) S.selId = S.members.length?S.members[0].id:null;
+    S.draftDirty = false; save(); render();
+    const b = $('admin-save-btn');
+    const t = b.textContent; b.textContent='✓ Saved!'; b.disabled=true;
+    setTimeout(()=>{b.textContent=t;b.disabled=false;},1200);
+  }
+
+  function adminDiscard() {
+    if(S.draftDirty && !confirm('Discard all changes?')) return;
+    S.draft = { members:JSON.parse(JSON.stringify(S.members)), removedIds:[] };
+    S.draftDirty = false; closeAllPopovers(); renderAdmin();
+  }
+
+  function adminAdd() {
+    if(!S.draft) return;
+    S.draft.members.push({ id:uid(), name:'', color:nextColor(S.draft.members), maxPTO:DEFAULT_MAX_PTO, maxParental:0 });
+    S.draftDirty = true; closeAllPopovers(); renderAdmin();
+    const idx = S.draft.members.length-1;
+    setTimeout(()=>{ const inp=$('an'+idx); if(inp) inp.focus(); },60);
+  }
+
+  function adminRemove(i) {
+    if(!S.draft||!S.draft.members[i]) return;
+    const m = S.draft.members[i];
+    if(!confirm(`Remove ${m.name||'this member'}? Their logged days off will be deleted on save.`)) return;
+    S.draft.removedIds.push(m.id);
+    S.draft.members.splice(i,1);
+    S.draftDirty = true; closeAllPopovers(); renderAdmin();
+  }
+
+  function adminReset() {
+    if(!confirm('This will delete ALL data and return to team setup. Are you sure?')) return;
+    if(!confirm('Really sure? This cannot be undone.')) return;
+    localStorage.removeItem(STORAGE_KEY);
+    S.members = []; S.daysOff = []; S.selId = null;
+    S.admin = false; S.draft = null; S.draftDirty = false;
+    S.pickStart = null; S.hoverDate = null;
+    closeAllPopovers();
+    $('app-wrap').classList.remove('active');
+    showOnboarding();
+  }
+
+  function trapFocus(e) {
+    if(!S.modalRange) return;
+    const mc = $('modal-content');
+    const focusable = [...mc.querySelectorAll('button:not(:disabled)')];
+    if(!focusable.length) return;
+    const first=focusable[0], last=focusable[focusable.length-1];
+    if(e.key==='Tab'){
+      if(e.shiftKey){ if(document.activeElement===first){e.preventDefault();last.focus();} }
+      else { if(document.activeElement===last){e.preventDefault();first.focus();} }
+    }
+    if(e.key==='Escape') closeModal();
+  }
+
+  /* ============================================================
+     BIND — APP
+     ============================================================ */
+  let appBound = false;
+  function bindApp() {
+    if(appBound) return;
+    appBound = true;
+
+    $('prev-month').addEventListener('click',()=>navMonth(-1));
+    $('next-month').addEventListener('click',()=>navMonth(1));
+
+    $('admin-toggle').addEventListener('click', toggleAdmin);
+
+    // --- Calendar ---
+    $('calendar-days').addEventListener('click', e=>{
+      const c = e.target.closest('.day-cell.cm');
+      if(c) onDayClick(c.dataset.d);
+    });
+
+    $('calendar-days').addEventListener('mouseover', e=>{
+      const c = e.target.closest('.day-cell.cm');
+      if(!c) return;
+      if(S.pickStart && !S.modalRange){ S.hoverDate=c.dataset.d; updateRangeHighlight(); }
+      showTooltip(c, c.dataset.d);
+    });
+
+    $('calendar-days').addEventListener('mouseleave', ()=>{
+      S.hoverDate=null; hideTooltip();
+      document.querySelectorAll('.day-cell.in-range').forEach(el=>el.classList.remove('in-range'));
+    });
+
+    $('calendar-days').addEventListener('keydown', e=>{
+      const c = e.target.closest('.day-cell.cm');
+      if(c && (e.key==='Enter'||e.key===' ')){ e.preventDefault(); onDayClick(c.dataset.d); }
+    });
+
+    $('selection-cancel').addEventListener('click', ()=>{
+      S.pickStart=null; S.hoverDate=null; renderCalendar();
+    });
+
+    document.addEventListener('keydown', e=>{
+      if(S.modalRange){ trapFocus(e); return; }
+      if(e.key==='Escape' && S.pickStart){ S.pickStart=null; S.hoverDate=null; renderCalendar(); }
+    });
+
+    // --- Sidebar member selection ---
+    $('summary-list').addEventListener('click', e=>{
+      const card = e.target.closest('.summary-card[data-mid]');
+      if(!card) return;
+      S.selId = card.dataset.mid;
+      S.pickStart = null; S.hoverDate = null;
+      render();
+    });
+
+    $('summary-list').addEventListener('keydown', e=>{
+      const card = e.target.closest('.summary-card[data-mid]');
+      if(card && (e.key==='Enter'||e.key===' ')){
+        e.preventDefault();
+        S.selId = card.dataset.mid;
+        S.pickStart = null; S.hoverDate = null;
+        render();
+      }
+    });
+
+    // --- Modal ---
+    $('modal-btn-pto').addEventListener('click',()=>confirmType('pto'));
+    $('modal-btn-sick').addEventListener('click',()=>confirmType('sick'));
+    $('modal-btn-parental').addEventListener('click',()=>confirmType('parental'));
+    $('modal-cancel').addEventListener('click',closeModal);
+    $('modal-overlay').addEventListener('click', e=>{ if(e.target===e.currentTarget) closeModal(); });
+
+    // --- Entry delete ---
+    $('entries-list').addEventListener('click', e=>{
+      const btn = e.target.closest('.entry-delete');
+      if(!btn) return;
+      if(!confirm('Delete this day off entry?')) return;
+      S.daysOff = S.daysOff.filter(en=>en.id!==btn.dataset.eid);
+      save(); render();
+    });
+
+    // --- Admin panel (delegation) ---
+    $('admin-members').addEventListener('click', e=>{
+      // Color trigger click
+      const trigger = e.target.closest('.admin-color-trigger');
+      if(trigger) {
+        e.stopPropagation();
+        togglePopover(trigger.parentElement);
+        return;
+      }
+
+      // Color swatch click
+      const swatch = e.target.closest('.color-swatch[data-ctx="admin"]');
+      if(swatch) {
+        const i = parseInt(swatch.dataset.i);
+        const clr = swatch.dataset.color;
+        if(!isNaN(i) && S.draft && S.draft.members[i] && clr){
+          S.draft.members[i].color = clr;
+          S.draftDirty = true;
+          closeAllPopovers();
+          renderAdmin();
+        }
+        return;
+      }
+
+      // Remove button
+      const btn = e.target.closest('.admin-remove');
+      if(btn) adminRemove(parseInt(btn.dataset.i));
+    });
+
+    $('admin-members').addEventListener('input', e=>{
+      const i = parseInt(e.target.dataset.i);
+      if(isNaN(i)||!S.draft||!S.draft.members[i]) return;
+      if(e.target.classList.contains('admin-name-input')){
+        S.draft.members[i].name = e.target.value; S.draftDirty = true;
+      } else if(e.target.dataset.f==='maxPTO'){
+        S.draft.members[i].maxPTO = Math.max(0,parseInt(e.target.value)||0); S.draftDirty = true;
+      } else if(e.target.dataset.f==='maxParental'){
+        S.draft.members[i].maxParental = Math.max(1,parseInt(e.target.value)||1); S.draftDirty = true;
+      }
+    });
+
+    $('admin-members').addEventListener('change', e=>{
+      if(e.target.type!=='checkbox') return;
+      const i = parseInt(e.target.dataset.i);
+      if(isNaN(i)||!S.draft||!S.draft.members[i]) return;
+      const on = e.target.checked;
+      const numInp = $('apd'+i);
+      if(on){
+        numInp.disabled = false;
+        S.draft.members[i].maxParental = parseInt(numInp.value)||30;
+        numInp.value = S.draft.members[i].maxParental;
+      } else {
+        numInp.disabled = true; numInp.value = '';
+        S.draft.members[i].maxParental = 0;
+      }
+      S.draftDirty = true;
+    });
+
+    $('admin-add-btn').addEventListener('click', adminAdd);
+    $('admin-save-btn').addEventListener('click', adminSave);
+    $('admin-discard-btn').addEventListener('click', adminDiscard);
+    $('admin-reset-btn').addEventListener('click', adminReset);
+  }
+
+  /* ============================================================
+     INIT
+     ============================================================ */
+  function init() {
+    bindOnboarding();
+
+    if(load()) {
+      $('onboarding').classList.add('hidden');
+      $('app-wrap').classList.add('active');
+      bindApp();
+      render();
+    } else {
+      showOnboarding();
+    }
+  }
+
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+
+})();
+</script>
+</body>
+</html>
