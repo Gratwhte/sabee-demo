@@ -3,9 +3,9 @@
 
   window.buildSwatchesHTML = function (currentColor, contextPrefix, index) {
     return window.PALETTE.map(clr =>
-      `<button type="button" class="color-swatch${clr===currentColor?' active':''}"
+      `<button type="button" class="color-swatch${clr === currentColor ? ' active' : ''}"
         style="background:${clr}" data-ctx="${contextPrefix}" data-i="${index}" data-color="${clr}"
-        aria-label="Color ${clr}${clr===currentColor?' (selected)':''}"></button>`
+        aria-label="Color ${clr}${clr === currentColor ? ' (selected)' : ''}"></button>`
     ).join('');
   };
 
@@ -51,11 +51,11 @@
     if (!el) return;
 
     const map = {
-      saved:    { text: '✓ Synced', cls: 'sync-ok' },
-      saving:   { text: '↑ Saving…', cls: 'sync-busy' },
-      offline:  { text: '⚡ Offline — local only', cls: 'sync-warn' },
+      saved: { text: '✓ Synced', cls: 'sync-ok' },
+      saving: { text: '↑ Saving…', cls: 'sync-busy' },
+      offline: { text: '⚡ Offline — local only', cls: 'sync-warn' },
       conflict: { text: '↻ Newer data found…', cls: 'sync-warn' },
-      updated:  { text: '↓ Updated from team', cls: 'sync-info' }
+      updated: { text: '↓ Updated from team', cls: 'sync-info' }
     };
 
     const s = map[status] || map.saved;
@@ -68,7 +68,7 @@
     window.$('onboarding').classList.remove('hidden');
     window.$('app-wrap').classList.remove('active');
     window.renderOnboarding();
-    setTimeout(() => window.$('ob-name-input').focus(), 100);
+    setTimeout(() => window.$('ob-name-input')?.focus(), 100);
   };
 
   window.renderOnboarding = function () {
@@ -114,15 +114,24 @@
 
   window.renderHeader = function () {
     const m = window.member(window.S.selId);
-    window.$('user-color-dot').style.background = m ? m.color : '#ccc';
-    window.$('active-user-name').textContent = m ? m.name : '';
-    window.$('active-user').classList.toggle('hidden', window.S.admin);
-    window.$('admin-toggle').textContent = window.S.admin ? '← Calendar' : '⚙ Admin';
+    const dot = window.$('user-color-dot');
+    const name = window.$('active-user-name');
+    const activeUser = window.$('active-user');
+    const toggle = window.$('admin-toggle');
+
+    if (dot) dot.style.background = m ? m.color : '#ccc';
+    if (name) name.textContent = m ? m.name : '';
+    if (activeUser) activeUser.classList.toggle('hidden', window.S.admin);
+    if (toggle) toggle.textContent = window.S.admin ? '← Calendar' : '⚙ Admin';
+
+    const title = window.$('entries-title');
+    if (title) title.textContent = m ? `${m.name}'s Days Off` : 'Your Days Off';
   };
 
   window.renderCalendar = function () {
     const { y, m } = window.S.month;
-    window.$('month-title').textContent = `${window.MONTHS[m]} ${y}`;
+    const monthTitle = window.$('month-title');
+    if (monthTitle) monthTitle.textContent = `${window.MONTHS[m]} ${y}`;
 
     const days = window.dim(y, m);
     const start = window.sdow(y, m);
@@ -140,40 +149,43 @@
       const ds = window.dstr(y, m, d);
       const dt = new Date(y, m, d);
       const wk = dt.getDay() === 0 || dt.getDay() === 6;
-      const t = ds === td;
-      const ss = window.S.pickStart === ds;
+      const isToday = ds === td;
+      const selStart = window.S.pickStart === ds;
 
-      let ir = false;
+      let inRange = false;
       if (window.S.pickStart && window.S.hoverDate && !window.S.modalRange) {
         const rs = window.dmin(window.S.pickStart, window.S.hoverDate);
         const re = window.dmax(window.S.pickStart, window.S.hoverDate);
-        ir = ds >= rs && ds <= re;
+        inRange = ds >= rs && ds <= re;
       }
 
       const cls = [
         'day-cell',
         'cm',
         wk ? 'weekend' : '',
-        t ? 'today' : '',
-        ss ? 'selection-start' : '',
-        ir ? 'in-range' : ''
+        isToday ? 'today' : '',
+        selStart ? 'selection-start' : '',
+        inRange ? 'in-range' : ''
       ].filter(Boolean).join(' ');
 
       const entries = window.entFor(ds);
 
       h += `<div class="${cls}" data-d="${ds}" role="gridcell" tabindex="0"
-            aria-label="${window.fmtL(ds)}${entries.length ? '. ' + entries.length + ' day(s) off logged' : ''}">
-            <span class="day-number">${d}</span>
-            <div class="day-dots">${window.renderDots(entries)}</div></div>`;
+        aria-label="${window.fmtL(ds)}${entries.length ? '. ' + entries.length + ' day(s) off logged' : ''}">
+        <span class="day-number">${d}</span>
+        <div class="day-dots">${window.renderDots(entries)}</div>
+      </div>`;
     }
 
     const tot = start + days;
-    const rem = (7 - tot % 7) % 7;
+    const rem = (7 - (tot % 7)) % 7;
     for (let i = 1; i <= rem; i++) {
       h += `<div class="day-cell other-month" aria-hidden="true"><span class="day-number">${i}</span></div>`;
     }
 
-    window.$('calendar-days').innerHTML = h;
+    const grid = window.$('calendar-days');
+    if (grid) grid.innerHTML = h;
+
     window.updateSelectionStatus();
   };
 
@@ -194,7 +206,7 @@
       if (!m) return '';
 
       if (e.t === 'sick') {
-        return `<span class="dot dot-sick" style="border-color:${m.color}" aria-label="${window.esc(m.name)}: Sick Leave"></span>`;
+        return `<span class="dot dot-sick" style="color:${m.color}; border-color:${m.color}" aria-label="${window.esc(m.name)}: Sick Leave"></span>`;
       }
 
       if (e.t === 'parental') {
@@ -214,39 +226,32 @@
 
   window.updateSelectionStatus = function () {
     const box = window.$('selection-status');
+    const text = window.$('selection-text');
+
+    if (!box || !text) return;
 
     if (window.S.pickStart && !window.S.modalRange) {
       box.classList.remove('hidden');
-      window.$('selection-text').textContent = `Start: ${window.fmtS(window.S.pickStart)} — click another day to complete`;
+      text.textContent = `Start: ${window.fmtS(window.S.pickStart)} — click another day to complete`;
     } else {
       box.classList.add('hidden');
     }
   };
 
-  window.updateRangeHighlight = function () {
-    document.querySelectorAll('.day-cell.cm').forEach(cell => {
-      const ds = cell.dataset.d;
-      cell.classList.remove('in-range');
-
-      if (window.S.pickStart && window.S.hoverDate && !window.S.modalRange) {
-        const rs = window.dmin(window.S.pickStart, window.S.hoverDate);
-        const re = window.dmax(window.S.pickStart, window.S.hoverDate);
-        if (ds >= rs && ds <= re) cell.classList.add('in-range');
-      }
-    });
-  };
-
   window.renderSidebar = function () {
+    const list = window.$('summary-list');
+    if (!list) return;
+
     if (!window.S.members.length) {
-      window.$('summary-list').innerHTML = '<p class="empty-note">No team members yet.</p>';
+      list.innerHTML = '<p class="empty-note">No team members yet.</p>';
       return;
     }
 
-    window.$('summary-list').innerHTML = window.S.members.map(m => {
+    list.innerHTML = window.S.members.map(m => {
       const usedPTO = window.usedDays(m.id, 'pto');
       const usedParental = window.usedDays(m.id, 'parental');
 
-      return `<button class="summary-card ${window.S.selId===m.id?'active':''}" data-mid="${m.id}" style="--member-color:${m.color}">
+      return `<button class="summary-card ${window.S.selId === m.id ? 'active' : ''}" data-mid="${m.id}" style="--member-color:${m.color}">
         <div class="summary-card-head">
           <span class="summary-card-name">${window.esc(m.name)}</span>
           <span class="summary-card-dot" style="background:${m.color}"></span>
@@ -276,9 +281,12 @@
   };
 
   window.renderEntries = function () {
+    const list = window.$('entries-list');
+    if (!list) return;
+
     const m = window.member(window.S.selId);
     if (!m) {
-      window.$('entries-list').innerHTML = '<p class="empty-note">Select a team member.</p>';
+      list.innerHTML = '<p class="empty-note">Select a team member.</p>';
       return;
     }
 
@@ -287,11 +295,11 @@
       .sort((a, b) => a.s.localeCompare(b.s));
 
     if (!entries.length) {
-      window.$('entries-list').innerHTML = '<p class="empty-note">No days off logged yet.</p>';
+      list.innerHTML = '<p class="empty-note">No days off logged yet.</p>';
       return;
     }
 
-    window.$('entries-list').innerHTML = entries.map(e => {
+    list.innerHTML = entries.map(e => {
       const days = window.dspan(e.s, e.e);
       return `<div class="entry-card">
         <div class="entry-main">
@@ -310,6 +318,9 @@
         removedIds: []
       };
     }
+
+    const list = window.$('admin-members');
+    if (!list) return;
 
     const rows = window.S.draft.members.map((m, i) => {
       const usedPTO = window.usedDays(m.id, 'pto');
@@ -344,41 +355,77 @@
       </div>`;
     }).join('');
 
-    window.$('admin-members').innerHTML =
-      rows || '<p class="empty-note">No members yet.</p>';
+    list.innerHTML = rows || '<p class="empty-note">No members yet.</p>';
 
     const saveBtn = window.$('admin-save-btn');
     if (saveBtn) saveBtn.disabled = !window.S.draftDirty;
   };
 
-window.openModal = function (start, end) {
-  const m = window.member(window.S.selId);
-  if (!m) return;
+  window.openModal = function (start, end) {
+    const m = window.member(window.S.selId);
+    if (!m) return;
 
-  window.S.modalRange = { s: start, e: end };
-  window.S.prevFocus = document.activeElement;
+    window.S.modalRange = { s: start, e: end };
+    window.S.prevFocus = document.activeElement;
 
-  const memberEl = window.$('modal-member');
-  const datesEl = window.$('modal-dates');
-  const parentalBtn = window.$('modal-btn-parental');
-  const overlay = window.$('modal-overlay');
+    const memberEl = window.$('modal-member');
+    const datesEl = window.$('modal-dates');
+    const detailPto = window.$('modal-detail-pto');
+    const detailSick = window.$('modal-detail-sick');
+    const detailParental = window.$('modal-detail-parental');
+    const errorEl = window.$('modal-error');
+    const warningEl = window.$('modal-warning');
+    const parentalBtn = window.$('modal-btn-parental');
+    const overlay = window.$('modal-overlay');
 
-  if (memberEl) memberEl.textContent = m.name;
-  if (datesEl) datesEl.textContent = `${window.fmtL(start)} → ${window.fmtL(end)}`;
-  if (parentalBtn) parentalBtn.disabled = m.maxParental <= 0;
+    if (memberEl) memberEl.textContent = m.name;
+    if (datesEl) datesEl.textContent = `${window.fmtS(start)} → ${window.fmtS(end)}`;
 
-  overlay.classList.remove('hidden');
+    const rangeDays = window.dspan(start, end);
+    const usedPTO = window.usedDays(m.id, 'pto');
+    const usedParental = window.usedDays(m.id, 'parental');
 
-  setTimeout(() => {
-    const btn = window.$('modal-btn-pto');
-    if (btn) btn.focus();
-  }, 30);
-};
+    if (detailPto) detailPto.textContent = `${rangeDays} day${rangeDays > 1 ? 's' : ''} • used ${usedPTO}/${m.maxPTO}`;
+    if (detailSick) detailSick.textContent = `${rangeDays} day${rangeDays > 1 ? 's' : ''}`;
+    if (detailParental) detailParental.textContent = `${rangeDays} day${rangeDays > 1 ? 's' : ''} • used ${usedParental}/${m.maxParental}`;
+
+    if (errorEl) {
+      errorEl.textContent = '';
+      errorEl.style.display = 'none';
+    }
+
+    if (warningEl) {
+      warningEl.textContent = '';
+      warningEl.style.display = 'none';
+    }
+
+    const hasOverlap = window.overlap(m.id, start, end);
+    if (hasOverlap && errorEl) {
+      errorEl.textContent = 'This range overlaps with an existing day-off entry.';
+      errorEl.style.display = 'block';
+    }
+
+    if (parentalBtn) parentalBtn.disabled = m.maxParental <= 0 || hasOverlap;
+
+    const ptoBtn = window.$('modal-btn-pto');
+    const sickBtn = window.$('modal-btn-sick');
+    if (ptoBtn) ptoBtn.disabled = hasOverlap;
+    if (sickBtn) sickBtn.disabled = hasOverlap;
+
+    if (overlay) overlay.classList.remove('hidden');
+
+    setTimeout(() => {
+      const btn = window.$('modal-btn-pto');
+      if (btn && !btn.disabled) btn.focus();
+    }, 30);
+  };
 
   window.closeModal = function () {
     window.S.modalRange = null;
-    window.$('modal-overlay').classList.add('hidden');
-    if (window.S.prevFocus && window.S.prevFocus.focus) {
+    const overlay = window.$('modal-overlay');
+    if (overlay) overlay.classList.add('hidden');
+
+    if (window.S.prevFocus && typeof window.S.prevFocus.focus === 'function') {
       window.S.prevFocus.focus();
     }
   };
