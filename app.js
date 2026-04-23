@@ -6,18 +6,25 @@
     const name = inp.value.trim();
     const err = window.$('ob-error');
 
-    err.classList.remove('visible');
+    if (err) {
+      err.textContent = '';
+      err.classList.remove('visible');
+    }
 
     if (!name) {
-      err.textContent = 'Please enter a name.';
-      err.classList.add('visible');
+      if (err) {
+        err.textContent = 'Please enter a name.';
+        err.classList.add('visible');
+      }
       inp.focus();
       return;
     }
 
     if (window.OB.members.some(m => m.name.toLowerCase() === name.toLowerCase())) {
-      err.textContent = 'This name is already in the list.';
-      err.classList.add('visible');
+      if (err) {
+        err.textContent = 'This name is already in the list.';
+        err.classList.add('visible');
+      }
       inp.focus();
       return;
     }
@@ -34,9 +41,6 @@
 
   window.obRemove = function (i) {
     window.OB.members.splice(i, 1);
-    window.OB.members.forEach((m, idx) => {
-      m.color = window.PALETTE[idx % window.PALETTE.length];
-    });
     window.renderOnboarding();
   };
 
@@ -74,7 +78,6 @@
     if (!m) return;
 
     const { s, e } = window.S.modalRange;
-
     if (window.overlap(m.id, s, e)) return;
     if (type === 'parental' && m.maxParental <= 0) return;
 
@@ -109,6 +112,7 @@
 
     const s = window.dmin(window.S.pickStart, ds);
     const e = window.dmax(window.S.pickStart, ds);
+
     window.S.pickStart = null;
     window.S.hoverDate = null;
     window.renderCalendar();
@@ -118,8 +122,14 @@
   window.navMonth = function (dir) {
     let { y, m } = window.S.month;
     m += dir;
-    if (m < 0) { m = 11; y -= 1; }
-    if (m > 11) { m = 0; y += 1; }
+    if (m < 0) {
+      m = 11;
+      y -= 1;
+    }
+    if (m > 11) {
+      m = 0;
+      y += 1;
+    }
     window.S.month = { y, m };
     window.renderCalendar();
   };
@@ -278,95 +288,128 @@
   };
 
   window.bindOnboarding = function () {
-    window.$('ob-add-btn').addEventListener('click', window.obAdd);
+    const addBtn = window.$('ob-add-btn');
+    const input = window.$('ob-name-input');
+    const members = window.$('ob-members');
+    const startBtn = window.$('ob-start-btn');
 
-    window.$('ob-name-input').addEventListener('keydown', e => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        window.obAdd();
-      }
-    });
+    if (addBtn) addBtn.addEventListener('click', window.obAdd);
 
-    window.$('ob-members').addEventListener('click', e => {
-      const btn = e.target.closest('.onboarding-member-remove');
-      if (btn) {
-        window.obRemove(parseInt(btn.dataset.i, 10));
-        return;
-      }
-
-      const dot = e.target.closest('.onboarding-member-color');
-      if (dot) {
-        e.stopPropagation();
-        window.togglePopover(dot.parentElement);
-        return;
-      }
-
-      const swatch = e.target.closest('.color-swatch[data-ctx="ob"]');
-      if (swatch) {
-        const i = parseInt(swatch.dataset.i, 10);
-        const clr = swatch.dataset.color;
-        if (!isNaN(i) && window.OB.members[i] && clr) {
-          window.OB.members[i].color = clr;
-          window.closeAllPopovers();
-          window.renderOnboarding();
+    if (input) {
+      input.addEventListener('keydown', e => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          window.obAdd();
         }
-      }
-    });
+      });
+    }
 
-    window.$('ob-members').addEventListener('keydown', e => {
-      const dot = e.target.closest('.onboarding-member-color');
-      if (dot && (e.key === 'Enter' || e.key === ' ')) {
-        e.preventDefault();
-        e.stopPropagation();
-        window.togglePopover(dot.parentElement);
-      }
-    });
+    if (members) {
+      members.addEventListener('click', e => {
+        const btn = e.target.closest('.onboarding-member-remove');
+        if (btn) {
+          window.obRemove(parseInt(btn.dataset.i, 10));
+          return;
+        }
 
-    window.$('ob-start-btn').addEventListener('click', window.obStart);
+        const dot = e.target.closest('.onboarding-member-color');
+        if (dot) {
+          e.stopPropagation();
+          window.togglePopover(dot.parentElement);
+          return;
+        }
+
+        const swatch = e.target.closest('.color-swatch[data-ctx="ob"]');
+        if (swatch) {
+          const i = parseInt(swatch.dataset.i, 10);
+          const clr = swatch.dataset.color;
+          if (!isNaN(i) && window.OB.members[i] && clr) {
+            window.OB.members[i].color = clr;
+            window.closeAllPopovers();
+            window.renderOnboarding();
+          }
+        }
+      });
+
+      members.addEventListener('keydown', e => {
+        const dot = e.target.closest('.onboarding-member-color');
+        if (dot && (e.key === 'Enter' || e.key === ' ')) {
+          e.preventDefault();
+          e.stopPropagation();
+          window.togglePopover(dot.parentElement);
+        }
+      });
+    }
+
+    if (startBtn) startBtn.addEventListener('click', window.obStart);
   };
 
   window.bindApp = function () {
     if (window.appBound) return;
     window.appBound = true;
 
-    window.$('prev-month').addEventListener('click', () => window.navMonth(-1));
-    window.$('next-month').addEventListener('click', () => window.navMonth(1));
-    window.$('admin-toggle').addEventListener('click', window.toggleAdmin);
+    const prevMonth = window.$('prev-month');
+    const nextMonth = window.$('next-month');
+    const adminToggle = window.$('admin-toggle');
+    const calendarDays = window.$('calendar-days');
+    const selectionCancel = window.$('selection-cancel');
+    const summaryList = window.$('summary-list');
+    const modalBtnPto = window.$('modal-btn-pto');
+    const modalBtnSick = window.$('modal-btn-sick');
+    const modalBtnParental = window.$('modal-btn-parental');
+    const modalCancel = window.$('modal-cancel');
+    const modalOverlay = window.$('modal-overlay');
+    const entriesList = window.$('entries-list');
+    const adminMembers = window.$('admin-members');
+    const adminAddBtn = window.$('admin-add-btn');
+    const adminSaveBtn = window.$('admin-save-btn');
+    const adminDiscardBtn = window.$('admin-discard-btn');
+    const adminResetBtn = window.$('admin-reset-btn');
 
-    window.$('calendar-days').addEventListener('click', e => {
-      const c = e.target.closest('.day-cell.cm');
-      if (c) window.onDayClick(c.dataset.d);
-    });
+    if (prevMonth) prevMonth.addEventListener('click', () => window.navMonth(-1));
+    if (nextMonth) nextMonth.addEventListener('click', () => window.navMonth(1));
+    if (adminToggle) adminToggle.addEventListener('click', window.toggleAdmin);
 
-    window.$('calendar-days').addEventListener('mouseover', e => {
-      const c = e.target.closest('.day-cell.cm');
-      if (!c) return;
-      if (window.S.pickStart && !window.S.modalRange) {
-        window.S.hoverDate = c.dataset.d;
-        window.updateRangeHighlight();
-      }
-      window.showTooltip(c, c.dataset.d);
-    });
+    if (calendarDays) {
+      calendarDays.addEventListener('click', e => {
+        const c = e.target.closest('.day-cell.cm');
+        if (c) window.onDayClick(c.dataset.d);
+      });
 
-    window.$('calendar-days').addEventListener('mouseleave', () => {
-      window.S.hoverDate = null;
-      window.hideTooltip();
-      document.querySelectorAll('.day-cell.in-range').forEach(el => el.classList.remove('in-range'));
-    });
+      calendarDays.addEventListener('mouseover', e => {
+        const c = e.target.closest('.day-cell.cm');
+        if (!c) return;
 
-    window.$('calendar-days').addEventListener('keydown', e => {
-      const c = e.target.closest('.day-cell.cm');
-      if (c && (e.key === 'Enter' || e.key === ' ')) {
-        e.preventDefault();
-        window.onDayClick(c.dataset.d);
-      }
-    });
+        if (window.S.pickStart && !window.S.modalRange) {
+          window.S.hoverDate = c.dataset.d;
+          window.renderCalendar();
+        }
 
-    window.$('selection-cancel').addEventListener('click', () => {
-      window.S.pickStart = null;
-      window.S.hoverDate = null;
-      window.renderCalendar();
-    });
+        window.showTooltip(c, c.dataset.d);
+      });
+
+      calendarDays.addEventListener('mouseleave', () => {
+        window.S.hoverDate = null;
+        window.hideTooltip();
+        if (window.S.pickStart) window.renderCalendar();
+      });
+
+      calendarDays.addEventListener('keydown', e => {
+        const c = e.target.closest('.day-cell.cm');
+        if (c && (e.key === 'Enter' || e.key === ' ')) {
+          e.preventDefault();
+          window.onDayClick(c.dataset.d);
+        }
+      });
+    }
+
+    if (selectionCancel) {
+      selectionCancel.addEventListener('click', () => {
+        window.S.pickStart = null;
+        window.S.hoverDate = null;
+        window.renderCalendar();
+      });
+    }
 
     document.addEventListener('keydown', e => {
       if (window.S.modalRange) {
@@ -381,100 +424,110 @@
       }
     });
 
-    window.$('summary-list').addEventListener('click', e => {
-      const card = e.target.closest('.summary-card[data-mid]');
-      if (!card) return;
-      window.S.selId = card.dataset.mid;
-      window.S.pickStart = null;
-      window.S.hoverDate = null;
-      window.render();
-    });
+    if (summaryList) {
+      summaryList.addEventListener('click', e => {
+        const card = e.target.closest('.summary-card[data-mid]');
+        if (!card) return;
 
-    window.$('summary-list').addEventListener('keydown', e => {
-      const card = e.target.closest('.summary-card[data-mid]');
-      if (card && (e.key === 'Enter' || e.key === ' ')) {
-        e.preventDefault();
         window.S.selId = card.dataset.mid;
         window.S.pickStart = null;
         window.S.hoverDate = null;
         window.render();
-      }
-    });
+      });
 
-    window.$('modal-btn-pto').addEventListener('click', () => window.confirmType('pto'));
-    window.$('modal-btn-sick').addEventListener('click', () => window.confirmType('sick'));
-    window.$('modal-btn-parental').addEventListener('click', () => window.confirmType('parental'));
-    window.$('modal-cancel').addEventListener('click', window.closeModal);
-    window.$('modal-overlay').addEventListener('click', e => {
-      if (e.target === e.currentTarget) window.closeModal();
-    });
-
-    window.$('entries-list').addEventListener('click', async e => {
-      const btn = e.target.closest('.entry-delete');
-      if (!btn) return;
-      if (!confirm('Delete this day off entry?')) return;
-
-      try {
-        await window.deleteDayOff(btn.dataset.eid);
-        await window.loadFromSupabase();
-        window.render();
-      } catch (err) {
-        console.error('Failed to delete day off entry', err);
-        alert('Failed to delete entry.');
-      }
-    });
-
-    window.$('admin-members').addEventListener('click', e => {
-      const trigger = e.target.closest('.admin-color-trigger');
-      if (trigger) {
-        e.stopPropagation();
-        window.togglePopover(trigger.parentElement);
-        return;
-      }
-
-      const swatch = e.target.closest('.color-swatch[data-ctx="admin"]');
-      if (swatch) {
-        const i = parseInt(swatch.dataset.i, 10);
-        const clr = swatch.dataset.color;
-        if (!isNaN(i) && window.S.draft && window.S.draft.members[i] && clr) {
-          window.S.draft.members[i].color = clr;
-          window.S.draftDirty = true;
-          window.closeAllPopovers();
-          window.renderAdmin();
+      summaryList.addEventListener('keydown', e => {
+        const card = e.target.closest('.summary-card[data-mid]');
+        if (card && (e.key === 'Enter' || e.key === ' ')) {
+          e.preventDefault();
+          window.S.selId = card.dataset.mid;
+          window.S.pickStart = null;
+          window.S.hoverDate = null;
+          window.render();
         }
-        return;
-      }
+      });
+    }
 
-      const btn = e.target.closest('.admin-remove');
-      if (btn) window.adminRemove(parseInt(btn.dataset.i, 10));
-    });
+    if (modalBtnPto) modalBtnPto.addEventListener('click', () => window.confirmType('pto'));
+    if (modalBtnSick) modalBtnSick.addEventListener('click', () => window.confirmType('sick'));
+    if (modalBtnParental) modalBtnParental.addEventListener('click', () => window.confirmType('parental'));
+    if (modalCancel) modalCancel.addEventListener('click', window.closeModal);
 
-    window.$('admin-members').addEventListener('input', e => {
-      const i = parseInt(e.target.dataset.i, 10);
-      if (isNaN(i) || !window.S.draft || !window.S.draft.members[i]) return;
+    if (modalOverlay) {
+      modalOverlay.addEventListener('click', e => {
+        if (e.target === e.currentTarget) window.closeModal();
+      });
+    }
 
-      if (e.target.classList.contains('admin-name-input')) {
-        window.S.draft.members[i].name = e.target.value;
-        window.S.draftDirty = true;
-      }
+    if (entriesList) {
+      entriesList.addEventListener('click', async e => {
+        const btn = e.target.closest('.entry-delete');
+        if (!btn) return;
+        if (!confirm('Delete this day off entry?')) return;
 
-      if (e.target.classList.contains('admin-pto-input')) {
-        window.S.draft.members[i].maxPTO = Math.max(0, parseInt(e.target.value || '0', 10));
-        window.S.draftDirty = true;
-      }
+        try {
+          await window.deleteDayOff(btn.dataset.eid);
+          await window.loadFromSupabase();
+          window.render();
+        } catch (err) {
+          console.error('Failed to delete day off entry', err);
+          alert('Failed to delete entry.');
+        }
+      });
+    }
 
-      if (e.target.classList.contains('admin-parental-input')) {
-        window.S.draft.members[i].maxParental = Math.max(0, parseInt(e.target.value || '0', 10));
-        window.S.draftDirty = true;
-      }
+    if (adminMembers) {
+      adminMembers.addEventListener('click', e => {
+        const trigger = e.target.closest('.admin-color-trigger');
+        if (trigger) {
+          e.stopPropagation();
+          window.togglePopover(trigger.parentElement);
+          return;
+        }
 
-      window.renderAdmin();
-    });
+        const swatch = e.target.closest('.color-swatch[data-ctx="admin"]');
+        if (swatch) {
+          const i = parseInt(swatch.dataset.i, 10);
+          const clr = swatch.dataset.color;
+          if (!isNaN(i) && window.S.draft && window.S.draft.members[i] && clr) {
+            window.S.draft.members[i].color = clr;
+            window.S.draftDirty = true;
+            window.closeAllPopovers();
+            window.renderAdmin();
+          }
+          return;
+        }
 
-    window.$('admin-add-btn').addEventListener('click', window.adminAdd);
-    window.$('admin-save-btn').addEventListener('click', window.adminSave);
-    window.$('admin-discard-btn').addEventListener('click', window.adminDiscard);
-    window.$('admin-reset-btn').addEventListener('click', window.adminReset);
+        const btn = e.target.closest('.admin-remove');
+        if (btn) window.adminRemove(parseInt(btn.dataset.i, 10));
+      });
+
+      adminMembers.addEventListener('input', e => {
+        const i = parseInt(e.target.dataset.i, 10);
+        if (isNaN(i) || !window.S.draft || !window.S.draft.members[i]) return;
+
+        if (e.target.classList.contains('admin-name-input')) {
+          window.S.draft.members[i].name = e.target.value;
+          window.S.draftDirty = true;
+        }
+
+        if (e.target.classList.contains('admin-pto-input')) {
+          window.S.draft.members[i].maxPTO = Math.max(0, parseInt(e.target.value || '0', 10));
+          window.S.draftDirty = true;
+        }
+
+        if (e.target.classList.contains('admin-parental-input')) {
+          window.S.draft.members[i].maxParental = Math.max(0, parseInt(e.target.value || '0', 10));
+          window.S.draftDirty = true;
+        }
+
+        window.renderAdmin();
+      });
+    }
+
+    if (adminAddBtn) adminAddBtn.addEventListener('click', window.adminAdd);
+    if (adminSaveBtn) adminSaveBtn.addEventListener('click', window.adminSave);
+    if (adminDiscardBtn) adminDiscardBtn.addEventListener('click', window.adminDiscard);
+    if (adminResetBtn) adminResetBtn.addEventListener('click', window.adminReset);
   };
 
   window.init = async function () {
