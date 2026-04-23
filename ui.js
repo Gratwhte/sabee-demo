@@ -351,19 +351,29 @@
     if (saveBtn) saveBtn.disabled = !window.S.draftDirty;
   };
 
-  window.openModal = function (start, end) {
-    const m = window.member(window.S.selId);
-    if (!m) return;
+window.openModal = function (start, end) {
+  const m = window.member(window.S.selId);
+  if (!m) return;
 
-    window.S.modalRange = { s: start, e: end };
-    window.S.prevFocus = document.activeElement;
+  window.S.modalRange = { s: start, e: end };
+  window.S.prevFocus = document.activeElement;
 
-    window.$('modal-range').textContent = `${window.fmtL(start)} → ${window.fmtL(end)}`;
-    window.$('modal-btn-parental').disabled = m.maxParental <= 0;
+  const memberEl = window.$('modal-member');
+  const datesEl = window.$('modal-dates');
+  const parentalBtn = window.$('modal-btn-parental');
+  const overlay = window.$('modal-overlay');
 
-    window.$('modal-overlay').classList.remove('hidden');
-    setTimeout(() => window.$('modal-btn-pto').focus(), 30);
-  };
+  if (memberEl) memberEl.textContent = m.name;
+  if (datesEl) datesEl.textContent = `${window.fmtL(start)} → ${window.fmtL(end)}`;
+  if (parentalBtn) parentalBtn.disabled = m.maxParental <= 0;
+
+  overlay.classList.remove('hidden');
+
+  setTimeout(() => {
+    const btn = window.$('modal-btn-pto');
+    if (btn) btn.focus();
+  }, 30);
+};
 
   window.closeModal = function () {
     window.S.modalRange = null;
