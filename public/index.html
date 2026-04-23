@@ -658,11 +658,16 @@ body {
 
 <div id="tooltip" class="tooltip" role="tooltip" aria-hidden="true"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 (function () {
   'use strict';
 
   const STORAGE_KEY = 'sabee-data';
+  const SUPABASE_URL = 'YOUR_SUPABASE_URL';
+  const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+  const WORKSPACE_ID = 'YOUR_WORKSPACE_ID';
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   const PALETTE = [
     '#EF4444','#F97316','#F43F5E','#84CC16','#22C55E',
     '#10B981','#14B8A6','#06B6D4','#0EA5E9','#3B82F6',
@@ -688,6 +693,22 @@ body {
   let _id = Date.now();
   const uid   = ()      => 'u' + (_id++).toString(36);
   const esc   = s       => { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; };
+
+  function dbMemberToUi(row) {
+    return { id: row.id, name: row.name, color: row.color, maxPTO: row.max_pto, maxParental: row.max_parental };
+  }
+
+  function uiMemberToDb(member) {
+    return { id: member.id, workspace_id: WORKSPACE_ID, name: member.name, color: member.color, max_pto: member.maxPTO, max_parental: member.maxParental };
+  }
+
+  function dbDayOffToUi(row) {
+    return { id: row.id, mid: row.member_id, s: row.start_date, e: row.end_date, t: row.type, note: row.note || '' };
+  }
+
+  function uiDayOffToDb(entry) {
+    return { id: entry.id, workspace_id: WORKSPACE_ID, member_id: entry.mid, start_date: entry.s, end_date: entry.e, type: entry.t, note: entry.note || null };
+  }
   const $     = id      => document.getElementById(id);
   const dstr  = (y,m,d) => `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
   const pdate = s       => { const [y,m,d]=s.split('-').map(Number); return new Date(y,m-1,d); };
@@ -762,117 +783,135 @@ body {
   /* ============================================================
      PERSISTENCE — API + localStorage fallback
      ============================================================ */
-  const API = '/api/data';
-  let _lastTs = 0;        // server timestamp of last known state
-  let _saving = false;     // debounce guard
-  let _pollTimer = null;
+  let _saving = false;
+  let _realtimeChannel = null;
 
-  async function save() {
-    // Always save locally first (instant, works offline)
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({
-        members: S.members, daysOff: S.daysOff, _ts: _lastTs
-      }));
-    } catch(e) { /* localStorage full or unavailable */ }
+  async function loadFromSupabase() {
+    const [membersRes, daysOffRes] = await Promise.all([
+      sb.from('members').select('*').eq('workspace_id', WORKSPACE_ID).order('created_at', { ascending: true }),
+      sb.from('days_off').select('*').eq('workspace_id', WORKSPACE_ID).order('start_date', { ascending: true })
+    ]);
 
-    // Then sync to server
-    if(_saving) return;
-    _saving = true;
-    try {
-      const res = await fetch(API, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          members: S.members,
-          daysOff: S.daysOff,
-          _ts: _lastTs
-        })
-      });
-      if(res.ok) {
-        const body = await res.json();
-        _lastTs = body._ts || Date.now();
-        setSyncStatus('saved');
-        if(body.conflict) {
-          setSyncStatus('conflict');
-          // Auto-refresh to get latest
-          setTimeout(()=> poll(), 800);
-        }
-      } else {
-        setSyncStatus('offline');
-      }
-    } catch(e) {
-      console.warn('API save failed, data is in localStorage', e);
-      setSyncStatus('offline');
-    } finally {
-      _saving = false;
+    if (membersRes.error) throw membersRes.error;
+    if (daysOffRes.error) throw daysOffRes.error;
+
+    S.members = (membersRes.data || []).map(dbMemberToUi);
+    S.daysOff = (daysOffRes.data || []).map(dbDayOffToUi);
+
+    if (!S.members.find(m => m.id === S.selId)) {
+      S.selId = S.members.length ? S.members[0].id : null;
     }
+
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ members: S.members, daysOff: S.daysOff }));
+    } catch (_) {}
   }
 
   async function load() {
-    // Try API first
     try {
-      const res = await fetch(API);
-      if(res.ok) {
-        const data = await res.json();
-        if(data && Array.isArray(data.members) && data.members.length) {
-          S.members = data.members;
-          S.daysOff = (data.daysOff||[]).map(e=>({...e}));
-          S.selId = S.members[0].id;
-          _lastTs = data._ts || 0;
-          // Mirror to localStorage
-          try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch(_){}
-          setSyncStatus('saved');
-          startPolling();
-          return true;
-        }
-      }
-    } catch(e) {
-      console.warn('API load failed, trying localStorage', e);
+      await loadFromSupabase();
+      setSyncStatus('saved');
+      startRealtime();
+      return S.members.length > 0;
+    } catch (e) {
+      console.warn('Supabase load failed, trying localStorage', e);
       setSyncStatus('offline');
     }
 
-    // Fallback to localStorage
     try {
       const d = JSON.parse(localStorage.getItem(STORAGE_KEY));
-      if(d && Array.isArray(d.members) && d.members.length) {
+      if (d && Array.isArray(d.members) && d.members.length) {
         S.members = d.members;
-        S.daysOff = (d.daysOff||[]).map(e=>({...e}));
+        S.daysOff = (d.daysOff || []).map(e => ({ ...e }));
         S.selId = S.members[0].id;
-        _lastTs = d._ts || 0;
-        startPolling();
         return true;
       }
-    } catch(e) { console.error('localStorage load failed', e); }
+    } catch (e) {
+      console.error('localStorage load failed', e);
+    }
+
     return false;
   }
 
-  // --- Polling: check for changes from other users ---
-  async function poll() {
+  async function save() {
     try {
-      const res = await fetch(API);
-      if(!res.ok) return;
-      const data = await res.json();
-      if(data._ts && data._ts > _lastTs) {
-        // Server has newer data — update
-        _lastTs = data._ts;
-        const oldSelId = S.selId;
-        S.members = data.members || [];
-        S.daysOff = (data.daysOff||[]).map(e=>({...e}));
-        // Preserve selected member if still exists
-        if(!S.members.find(m=>m.id===oldSelId)) {
-          S.selId = S.members.length ? S.members[0].id : null;
-        }
-        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch(_){}
-        setSyncStatus('updated');
-        if(!S.admin) render();  // Don't overwrite admin draft
-        setTimeout(()=> setSyncStatus('saved'), 2000);
-      }
-    } catch(_) { /* silent — next poll will try again */ }
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ members: S.members, daysOff: S.daysOff }));
+    } catch (_) {}
+    setSyncStatus('saved');
   }
 
-  function startPolling() {
-    if(_pollTimer) clearInterval(_pollTimer);
-    _pollTimer = setInterval(poll, 5000);  // every 5 seconds
+  function stopRealtime() {
+    if (_realtimeChannel) {
+      sb.removeChannel(_realtimeChannel);
+      _realtimeChannel = null;
+    }
+  }
+
+  function startRealtime() {
+    stopRealtime();
+
+    _realtimeChannel = sb
+      .channel('sabee-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'members', filter: `workspace_id=eq.${WORKSPACE_ID}` }, async () => {
+        try {
+          await loadFromSupabase();
+          setSyncStatus('updated');
+          if (!S.admin) render();
+          setTimeout(() => setSyncStatus('saved'), 1500);
+        } catch (e) {
+          console.warn('Realtime members refresh failed', e);
+          setSyncStatus('offline');
+        }
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'days_off', filter: `workspace_id=eq.${WORKSPACE_ID}` }, async () => {
+        try {
+          await loadFromSupabase();
+          setSyncStatus('updated');
+          if (!S.admin) render();
+          setTimeout(() => setSyncStatus('saved'), 1500);
+        } catch (e) {
+          console.warn('Realtime days_off refresh failed', e);
+          setSyncStatus('offline');
+        }
+      })
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') setSyncStatus('saved');
+      });
+  }
+
+  async function createMember(member) {
+    setSyncStatus('saving');
+    const { error } = await sb.from('members').insert([uiMemberToDb(member)]);
+    if (error) { setSyncStatus('offline'); throw error; }
+    setSyncStatus('saved');
+  }
+
+  async function updateMember(member) {
+    setSyncStatus('saving');
+    const { error } = await sb.from('members').update({ name: member.name, color: member.color, max_pto: member.maxPTO, max_parental: member.maxParental }).eq('id', member.id).eq('workspace_id', WORKSPACE_ID);
+    if (error) { setSyncStatus('offline'); throw error; }
+    setSyncStatus('saved');
+  }
+
+  async function deleteMember(memberId) {
+    setSyncStatus('saving');
+    const { error } = await sb.from('members').delete().eq('id', memberId).eq('workspace_id', WORKSPACE_ID);
+    if (error) { setSyncStatus('offline'); throw error; }
+    setSyncStatus('saved');
+  }
+
+  async function createDayOff(entry) {
+    setSyncStatus('saving');
+    const { error } = await sb.from('days_off').insert([uiDayOffToDb(entry)]);
+    if (error) { setSyncStatus('offline'); throw error; }
+    setSyncStatus('saved');
+  }
+
+  async function deleteDayOff(entryId) {
+    setSyncStatus('saving');
+    const { error } = await sb.from('days_off').delete().eq('id', entryId).eq('workspace_id', WORKSPACE_ID);
+    if (error) { setSyncStatus('offline'); throw error; }
+    setSyncStatus('saved');
   }
 
   // --- Sync status indicator ---
@@ -953,21 +992,31 @@ body {
     renderOnboarding();
   }
 
-  function obStart() {
-    if(!OB.members.length) return;
-    S.members = OB.members.map(m => ({
-      id: uid(), name: m.name, color: m.color,
-      maxPTO: DEFAULT_MAX_PTO, maxParental: 0
-    }));
-    S.daysOff = [];
-    S.selId = S.members[0].id;
-    save();
-    startPolling();
+  async function obStart() {
+    if (!OB.members.length) return;
 
-    $('onboarding').classList.add('hidden');
-    $('app-wrap').classList.add('active');
-    bindApp();
-    render();
+    try {
+      for (const m of OB.members) {
+        await createMember({
+          id: crypto.randomUUID(),
+          name: m.name,
+          color: m.color,
+          maxPTO: DEFAULT_MAX_PTO,
+          maxParental: 0
+        });
+      }
+
+      await loadFromSupabase();
+      S.selId = S.members.length ? S.members[0].id : null;
+
+      $('onboarding').classList.add('hidden');
+      $('app-wrap').classList.add('active');
+      bindApp();
+      render();
+    } catch (e) {
+      console.error('Onboarding failed', e);
+      alert('Failed to create team.');
+    }
   }
 
   function bindOnboarding() {
@@ -1262,15 +1311,32 @@ body {
     renderCalendar();
   }
 
-  function confirmType(type) {
-    if(!S.modalRange || !S.selId) return;
+  async function confirmType(type) {
+    if (!S.modalRange || !S.selId) return;
     const m = member(S.selId);
-    if(!m) return;
-    const {s,e} = S.modalRange;
-    if(overlap(m.id,s,e)) return;
-    if(type==='parental' && m.maxParental<=0) return;
-    S.daysOff.push({ id:uid(), mid:m.id, s, e, t:type });
-    save(); closeModal(); render();
+    if (!m) return;
+
+    const { s, e } = S.modalRange;
+    if (overlap(m.id, s, e)) return;
+    if (type === 'parental' && m.maxParental <= 0) return;
+
+    try {
+      await createDayOff({
+        id: crypto.randomUUID(),
+        mid: m.id,
+        s,
+        e,
+        t: type,
+        note: ''
+      });
+
+      await loadFromSupabase();
+      closeModal();
+      render();
+    } catch (err) {
+      console.error('Failed to create day off entry', err);
+      alert('Failed to save day off entry.');
+    }
   }
 
   /* ============================================================
@@ -1327,18 +1393,60 @@ body {
     render();
   }
 
-  function adminSave() {
-    if(!S.draft) return;
-    if(S.draft.members.some(m=>!m.name.trim())){ alert('All members must have a name.'); return; }
-    const names = S.draft.members.map(m=>m.name.trim().toLowerCase());
-    if(new Set(names).size !== names.length){ alert('Member names must be unique.'); return; }
-    S.members = S.draft.members;
-    S.draft.removedIds.forEach(rid=>{ S.daysOff = S.daysOff.filter(e=>e.mid!==rid); });
-    if(!S.members.find(m=>m.id===S.selId)) S.selId = S.members.length?S.members[0].id:null;
-    S.draftDirty = false; save(); render();
-    const b = $('admin-save-btn');
-    const t = b.textContent; b.textContent='✓ Saved!'; b.disabled=true;
-    setTimeout(()=>{b.textContent=t;b.disabled=false;},1200);
+  async function adminSave() {
+    if (!S.draft) return;
+    if (S.draft.members.some(m => !m.name.trim())) { alert('All members must have a name.'); return; }
+
+    const names = S.draft.members.map(m => m.name.trim().toLowerCase());
+    if (new Set(names).size !== names.length) { alert('Member names must be unique.'); return; }
+
+    try {
+      const currentById = new Map(S.members.map(m => [m.id, m]));
+      const draftById = new Map(S.draft.members.map(m => [m.id, m]));
+
+      for (const existing of S.members) {
+        if (!draftById.has(existing.id)) {
+          await deleteMember(existing.id);
+        }
+      }
+
+      for (const draftMember of S.draft.members) {
+        const existing = currentById.get(draftMember.id);
+
+        if (!existing) {
+          await createMember(draftMember);
+          continue;
+        }
+
+        const changed =
+          existing.name !== draftMember.name ||
+          existing.color !== draftMember.color ||
+          existing.maxPTO !== draftMember.maxPTO ||
+          existing.maxParental !== draftMember.maxParental;
+
+        if (changed) {
+          await updateMember(draftMember);
+        }
+      }
+
+      await loadFromSupabase();
+
+      if (!S.members.find(m => m.id === S.selId)) {
+        S.selId = S.members.length ? S.members[0].id : null;
+      }
+
+      S.draftDirty = false;
+      render();
+
+      const b = $('admin-save-btn');
+      const t = b.textContent;
+      b.textContent = '✓ Saved!';
+      b.disabled = true;
+      setTimeout(() => { b.textContent = t; b.disabled = false; }, 1200);
+    } catch (err) {
+      console.error('Admin save failed', err);
+      alert('Failed to save team changes.');
+    }
   }
 
   function adminDiscard() {
@@ -1348,11 +1456,19 @@ body {
   }
 
   function adminAdd() {
-    if(!S.draft) return;
-    S.draft.members.push({ id:uid(), name:'', color:nextColor(S.draft.members), maxPTO:DEFAULT_MAX_PTO, maxParental:0 });
-    S.draftDirty = true; closeAllPopovers(); renderAdmin();
-    const idx = S.draft.members.length-1;
-    setTimeout(()=>{ const inp=$('an'+idx); if(inp) inp.focus(); },60);
+    if (!S.draft) return;
+    S.draft.members.push({
+      id: crypto.randomUUID(),
+      name: '',
+      color: nextColor(S.draft.members),
+      maxPTO: DEFAULT_MAX_PTO,
+      maxParental: 0
+    });
+    S.draftDirty = true;
+    closeAllPopovers();
+    renderAdmin();
+    const idx = S.draft.members.length - 1;
+    setTimeout(() => { const inp = $('an' + idx); if (inp) inp.focus(); }, 60);
   }
 
   function adminRemove(i) {
@@ -1461,12 +1577,19 @@ body {
     $('modal-overlay').addEventListener('click', e=>{ if(e.target===e.currentTarget) closeModal(); });
 
     // --- Entry delete ---
-    $('entries-list').addEventListener('click', e=>{
+    $('entries-list').addEventListener('click', async e => {
       const btn = e.target.closest('.entry-delete');
-      if(!btn) return;
-      if(!confirm('Delete this day off entry?')) return;
-      S.daysOff = S.daysOff.filter(en=>en.id!==btn.dataset.eid);
-      save(); render();
+      if (!btn) return;
+      if (!confirm('Delete this day off entry?')) return;
+
+      try {
+        await deleteDayOff(btn.dataset.eid);
+        await loadFromSupabase();
+        render();
+      } catch (err) {
+        console.error('Failed to delete day off entry', err);
+        alert('Failed to delete entry.');
+      }
     });
 
     // --- Admin panel (delegation) ---
@@ -1536,11 +1659,10 @@ body {
   /* ============================================================
      INIT
      ============================================================ */
-async function init() {
+  async function init() {
     bindOnboarding();
 
-    const loaded = await load();
-    if(loaded) {
+    if (await load()) {
       $('onboarding').classList.add('hidden');
       $('app-wrap').classList.add('active');
       bindApp();
@@ -1550,7 +1672,7 @@ async function init() {
     }
   }
 
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', ()=> init());
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', init);
   else init();
 
 })();
