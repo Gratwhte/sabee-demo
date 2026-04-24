@@ -271,4 +271,32 @@
 
     window.setSyncStatus('saved');
   };
+
+  window.clearAllWorkspaceData = async function () {
+    const workspaceId = window.SABEE_CONFIG.WORKSPACE_ID;
+
+    window.setSyncStatus('saving');
+
+    const { error: daysOffError } = await window.sb
+      .from('days_off')
+      .delete()
+      .eq('workspace_id', workspaceId);
+
+    if (daysOffError) {
+      window.setSyncStatus('offline');
+      throw daysOffError;
+    }
+
+    const { error: membersError } = await window.sb
+      .from('members')
+      .delete()
+      .eq('workspace_id', workspaceId);
+
+    if (membersError) {
+      window.setSyncStatus('offline');
+      throw membersError;
+    }
+
+    window.setSyncStatus('saved');
+  };
 })();
