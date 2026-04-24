@@ -118,14 +118,13 @@
     const name = window.$('active-user-name');
     const activeUser = window.$('active-user');
     const toggle = window.$('admin-toggle');
+    const entriesTitle = window.$('entries-title');
 
     if (dot) dot.style.background = m ? m.color : '#ccc';
     if (name) name.textContent = m ? m.name : '';
     if (activeUser) activeUser.classList.toggle('hidden', window.S.admin);
     if (toggle) toggle.textContent = window.S.admin ? '← Calendar' : '⚙ Admin';
-
-    const title = window.$('entries-title');
-    if (title) title.textContent = m ? `${m.name}'s Days Off` : 'Your Days Off';
+    if (entriesTitle) entriesTitle.textContent = m ? `${m.name}'s Days Off` : 'Your Days Off';
   };
 
   window.renderCalendar = function () {
@@ -187,6 +186,23 @@
     if (grid) grid.innerHTML = h;
 
     window.updateSelectionStatus();
+  };
+
+  window.updateRangeHighlight = function () {
+    const cells = document.querySelectorAll('.day-cell.cm');
+
+    cells.forEach(cell => {
+      const ds = cell.dataset.d;
+      cell.classList.remove('in-range');
+
+      if (window.S.pickStart && window.S.hoverDate && !window.S.modalRange) {
+        const rs = window.dmin(window.S.pickStart, window.S.hoverDate);
+        const re = window.dmax(window.S.pickStart, window.S.hoverDate);
+        if (ds >= rs && ds <= re) {
+          cell.classList.add('in-range');
+        }
+      }
+    });
   };
 
   window.renderDots = function (entries) {
@@ -361,6 +377,11 @@
     if (saveBtn) saveBtn.disabled = !window.S.draftDirty;
   };
 
+  window.refreshAdminSaveState = function () {
+    const saveBtn = window.$('admin-save-btn');
+    if (saveBtn) saveBtn.disabled = !window.S.draftDirty;
+  };
+
   window.openModal = function (start, end) {
     const m = window.member(window.S.selId);
     if (!m) return;
@@ -405,12 +426,12 @@
       errorEl.style.display = 'block';
     }
 
-    if (parentalBtn) parentalBtn.disabled = m.maxParental <= 0 || hasOverlap;
-
     const ptoBtn = window.$('modal-btn-pto');
     const sickBtn = window.$('modal-btn-sick');
+
     if (ptoBtn) ptoBtn.disabled = hasOverlap;
     if (sickBtn) sickBtn.disabled = hasOverlap;
+    if (parentalBtn) parentalBtn.disabled = m.maxParental <= 0 || hasOverlap;
 
     if (overlay) overlay.classList.remove('hidden');
 
