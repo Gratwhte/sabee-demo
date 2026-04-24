@@ -78,6 +78,7 @@
     if (!m) return;
 
     const { s, e } = window.S.modalRange;
+
     if (window.overlap(m.id, s, e)) return;
     if (type === 'parental' && m.maxParental <= 0) return;
 
@@ -122,14 +123,17 @@
   window.navMonth = function (dir) {
     let { y, m } = window.S.month;
     m += dir;
+
     if (m < 0) {
       m = 11;
       y -= 1;
     }
+
     if (m > 11) {
       m = 0;
       y += 1;
     }
+
     window.S.month = { y, m };
     window.renderCalendar();
   };
@@ -193,9 +197,29 @@
     window.renderAdmin();
   };
 
-  window.adminReset = function () {
-    if (!confirm('Reset admin changes?')) return;
-    window.adminDiscard();
+  window.adminReset = async function () {
+    const ok = confirm('This will permanently delete all members and all days off for this workspace. Continue?');
+    if (!ok) return;
+
+    try {
+      await window.clearAllWorkspaceData();
+
+      window.S.members = [];
+      window.S.daysOff = [];
+      window.S.selId = null;
+      window.S.pickStart = null;
+      window.S.hoverDate = null;
+      window.S.admin = false;
+      window.S.draft = null;
+      window.S.draftDirty = false;
+      window.S.modalRange = null;
+
+      window.closeModal();
+      window.showOnboarding();
+    } catch (err) {
+      console.error('Admin reset failed', err);
+      alert('Failed to reset workspace data.');
+    }
   };
 
   window.adminSave = async function () {
@@ -382,7 +406,7 @@
 
         if (window.S.pickStart && !window.S.modalRange) {
           window.S.hoverDate = c.dataset.d;
-          window.renderCalendar();
+          window.updateRangeHighlight();
         }
 
         window.showTooltip(c, c.dataset.d);
@@ -391,7 +415,7 @@
       calendarDays.addEventListener('mouseleave', () => {
         window.S.hoverDate = null;
         window.hideTooltip();
-        if (window.S.pickStart) window.renderCalendar();
+        window.updateRangeHighlight();
       });
 
       calendarDays.addEventListener('keydown', e => {
@@ -508,19 +532,22 @@
         if (e.target.classList.contains('admin-name-input')) {
           window.S.draft.members[i].name = e.target.value;
           window.S.draftDirty = true;
+          window.refreshAdminSaveState();
+          return;
         }
 
         if (e.target.classList.contains('admin-pto-input')) {
           window.S.draft.members[i].maxPTO = Math.max(0, parseInt(e.target.value || '0', 10));
           window.S.draftDirty = true;
+          window.refreshAdminSaveState();
+          return;
         }
 
         if (e.target.classList.contains('admin-parental-input')) {
           window.S.draft.members[i].maxParental = Math.max(0, parseInt(e.target.value || '0', 10));
           window.S.draftDirty = true;
+          window.refreshAdminSaveState();
         }
-
-        window.renderAdmin();
       });
     }
 
