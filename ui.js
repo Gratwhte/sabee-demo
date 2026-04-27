@@ -256,17 +256,18 @@
 
   window.renderSummaryList = function () {
     if (!window.S.rosterMembers.length) {
-      return `<div class="empty">No roster members yet.</div>`;
+      return `<div class="empty">No team members yet.</div>`;
     }
 
     return window.S.rosterMembers.map(m => {
       const usedPTO = window.usedDays(m.id, 'pto');
       const usedParental = window.usedDays(m.id, 'parental');
+      const linkedSelf = window.S.user && m.userId === window.S.user.id;
 
       return `
         <button type="button" class="summary-card ${window.S.selectedMemberId === m.id ? 'active' : ''}" data-mid="${m.id}" style="--member-color:${m.color}">
           <div class="summary-card-head">
-            <span class="summary-card-name">${window.esc(m.name)}</span>
+            <span class="summary-card-name">${window.esc(m.name)} ${linkedSelf ? '<span class="small muted">(you)</span>' : ''}</span>
             <span class="summary-card-dot" style="background:${m.color}"></span>
           </div>
 
@@ -296,7 +297,7 @@
 
   window.renderEntries = function () {
     const m = window.rosterMember(window.S.selectedMemberId);
-    if (!m) return `<div class="empty">Select a roster member.</div>`;
+    if (!m) return `<div class="empty">Select a team member.</div>`;
 
     const entries = window.S.daysOff
       .filter(e => e.mid === m.id)
@@ -306,6 +307,8 @@
       return `<div class="empty">No days off logged yet.</div>`;
     }
 
+    const canEdit = window.canEditSelectedMember();
+
     return entries.map(e => {
       const days = window.dspan(e.s, e.e);
       return `
@@ -314,7 +317,7 @@
             <div class="entry-title">${window.TYPE_ICON[e.t]} ${window.TYPE_LABEL[e.t]}</div>
             <div class="entry-meta">${window.fmtS(e.s)} → ${window.fmtS(e.e)} · ${days} day${days > 1 ? 's' : ''}</div>
           </div>
-          ${window.isAdmin() ? `<button type="button" class="btn btn-ghost entry-delete-btn" data-entry-id="${e.id}">Delete</button>` : ''}
+          ${canEdit ? `<button type="button" class="btn btn-ghost entry-delete-btn" data-entry-id="${e.id}">Delete</button>` : ''}
         </div>
       `;
     }).join('');
@@ -384,7 +387,7 @@
 
       const cls = [
         'day-cell',
-        window.isAdmin() ? 'cm' : '',
+        window.canEditSelectedMember() ? 'cm' : '',
         wk ? 'weekend' : '',
         isToday ? 'today' : '',
         selStart ? 'selection-start' : '',
@@ -411,8 +414,12 @@
   };
 
   window.renderSelectionStatus = function () {
-    if (!window.isAdmin()) {
-      return `<div class="alert alert-info">Calendar is visible to everyone, but only owners/admins can add or remove day-off entries.</div>`;
+    if (!window.S.selectedMemberId) {
+      return `<div class="alert alert-info">Select a team member from the right-hand list.</div>`;
+    }
+
+    if (!window.canEditSelectedMember()) {
+      return `<div class="alert alert-info">You can view all team calendars. You can edit your own calendar${window.isAdmin() ? ' and, as admin, any team member calendar' : ''}.</div>`;
     }
 
     if (window.S.pickStart && !window.S.modalRange) {
@@ -424,7 +431,7 @@
       `;
     }
 
-    return `<div class="alert alert-info">Select a roster member, then click a start date and an end date to add time off.</div>`;
+    return `<div class="alert alert-info">Click a start date and an end date to add time off for the selected team member.</div>`;
   };
 
   window.renderCalendarView = function () {
@@ -452,7 +459,7 @@
         </section>
 
         <aside class="side-panel">
-          <h3 style="margin:0 0 12px">Roster</h3>
+          <h3 style="margin:0 0 12px">Team Members</h3>
           <div id="summary-list" class="summary-list">${window.renderSummaryList()}</div>
 
           <div class="hr"></div>
