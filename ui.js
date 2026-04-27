@@ -39,6 +39,60 @@
     `;
   };
 
+  window.renderInvitePreviewPage = function () {
+    const preview = window.S.invitePreview;
+
+    return `
+      <div class="page">
+        ${window.renderTopbar()}
+        <div class="hero-wrap">
+          <div class="card auth-card">
+            <div class="auth-head">
+              <h2>Team invitation</h2>
+              <p>You were invited to join a Sabee team.</p>
+            </div>
+
+            ${window.renderMessageBlock()}
+
+            ${
+              !preview ? `
+                <div class="alert alert-error">This invite could not be loaded.</div>
+              ` : !preview.is_valid ? `
+                <div class="alert alert-error">This invite has expired or is no longer valid.</div>
+                <div class="field">
+                  <label>Team</label>
+                  <div class="input">${window.esc(preview.team_name || 'Unknown team')}</div>
+                </div>
+              ` : `
+                <div class="stack">
+                  <div class="field">
+                    <label>Invited team</label>
+                    <div class="input">${window.esc(preview.team_name)}</div>
+                  </div>
+
+                  <div class="alert alert-info">
+                    This invite expires in ${window.esc(window.formatRemaining(preview.expires_at))}.
+                  </div>
+
+                  <div class="alert alert-warn">
+                    In this version of Sabee, each user can belong to only one team at a time.
+                    If you continue with this invitation and join the team, your current active team access will be replaced.
+                  </div>
+
+                  <div class="row">
+                    <button id="continue-invite-btn" class="btn btn-primary" type="button">
+                      Continue to join this team
+                    </button>
+                  </div>
+                </div>
+              `
+            }
+          </div>
+        </div>
+      </div>
+    `;
+  };
+
   window.renderAuthPage = function () {
     const mode = window.S.authMode;
 
@@ -48,8 +102,8 @@
         <div class="hero-wrap">
           <div class="card auth-card">
             <div class="auth-head">
-              <h2>Set up your team</h2>
-              <p>Create a new team or sign in to join one.</p>
+              <h2>${window.S.pendingInviteToken ? 'Sign in to continue' : 'Set up your team'}</h2>
+              <p>${window.S.pendingInviteToken ? 'Authenticate first, then we will continue your invite flow.' : 'Create a new team or sign in to join one.'}</p>
             </div>
 
             <div class="tabs">
@@ -199,6 +253,7 @@
     const team = window.S.activeTeam;
     const membership = window.S.membership;
     const role = membership?.role || 'member';
+    const activeInvite = window.S.activeInvite;
 
     return `
       <div class="page">
@@ -228,7 +283,7 @@
                 <div class="stack">
                   <button id="refresh-team-data-btn" class="btn btn-secondary" type="button">Refresh</button>
                   ${(role === 'owner' || role === 'admin') ? `
-                    <button id="invite-btn" class="btn btn-primary" type="button">Invite</button>
+                    <button id="invite-btn" class="btn btn-primary" type="button">Generate / Show invite</button>
                   ` : ''}
                 </div>
               </div>
@@ -240,7 +295,6 @@
                   <h2 style="margin:0 0 8px">Sabee beta v6 foundation</h2>
                   <div class="meta">
                     Authentication, teams, join requests, invite links, roles, and profile handling are now active.
-                    The calendar/team time-off UI will be rewired into this team-scoped shell in the next step.
                   </div>
                 </div>
 
@@ -265,7 +319,16 @@
                 <div>
                   <h3 class="section-title">Invite link</h3>
                   <div id="invite-link-area" class="stack">
-                    <div class="empty">No invite generated yet.</div>
+                    ${
+                      activeInvite && activeInvite.is_active
+                        ? `
+                          <div class="alert alert-success">
+                            Active invite available. Expires in ${window.esc(window.formatRemaining(activeInvite.expires_at))}.
+                          </div>
+                          <div class="codebox">${window.esc(`${window.SABEE_CONFIG.APP_URL}?invite=${activeInvite.token}`)}</div>
+                        `
+                        : '<div class="empty">No active invite yet.</div>'
+                    }
                   </div>
                 </div>
               </div>
@@ -343,6 +406,11 @@
           </div>
         </div>
       `;
+      return;
+    }
+
+    if (window.S.invitePreview && !window.S.user) {
+      app.innerHTML = window.renderInvitePreviewPage();
       return;
     }
 
