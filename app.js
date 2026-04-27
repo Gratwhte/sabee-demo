@@ -1,20 +1,57 @@
 (function () {
   'use strict';
 
+  let inviteCountdownTimer = null;
+
+  function startInviteCountdown() {
+    if (inviteCountdownTimer) {
+      clearInterval(inviteCountdownTimer);
+      inviteCountdownTimer = null;
+    }
+
+    inviteCountdownTimer = setInterval(() => {
+      if (!window.S.activeInvite && !window.S.invitePreview) return;
+
+      const inviteArea = window.$('invite-link-area');
+      if (inviteArea && window.S.activeInvite && window.S.activeInvite.is_active) {
+        inviteArea.innerHTML = `
+          <div class="alert alert-success">
+            Active invite available. Expires in ${window.esc(window.formatRemaining(window.S.activeInvite.expires_at))}.
+          </div>
+          <div class="codebox">${window.esc(`${window.SABEE_CONFIG.APP_URL}?invite=${window.S.activeInvite.token}`)}</div>
+        `;
+      }
+
+      const alerts = document.querySelectorAll('.alert');
+      alerts.forEach(() => {});
+
+      if (window.S.invitePreview && !window.S.user) {
+        window.render();
+      }
+    }, 1000);
+  }
+
   async function refreshActiveTeamState() {
     await window.bootstrapAuthState();
 
     if (window.S.activeTeam) {
       try {
-        const [requests, memberships] = await Promise.all([
-          (window.S.membership?.role === 'owner' || window.S.membership?.role === 'admin')
-            ? window.loadPendingRequestsForMyTeam(window.S.activeTeam.id)
-            : Promise.resolve([]),
-          window.loadTeamMembers(window.S.activeTeam.id)
-        ]);
+        const promises = [
+          window.loadTeamMembers(window.S.activeTeam.id),
+          window.loadActiveInvite(window.S.activeTeam.id)
+        ];
+
+        if (window.S.membership?.role === 'owner' || window.S.membership?.role === 'admin') {
+          promises.unshift(window.loadPendingRequestsForMyTeam(window.S.activeTeam.id));
+        } else {
+          promises.unshift(Promise.resolve([]));
+        }
+
+        const [requests, memberships, activeInvite] = await Promise.all(promises);
 
         window.S.joinRequests = requests;
         window.S.teams = memberships;
+        window.S.activeInvite = activeInvite;
       } catch (err) {
         console.error(err);
         window.setError(err.message || 'Failed to load team data.');
@@ -22,6 +59,7 @@
     } else {
       window.S.joinRequests = [];
       window.S.teams = [];
+      window.S.activeInvite = null;
     }
   }
 
@@ -34,26 +72,38 @@
     }
   }
 
-  async function handleInviteTokenIfPresent() {
+  async function loadInvitePreviewIfPresent() {
     const token = window.getInviteTokenFromUrl();
+    window.S.pendingInviteToken = token || null;
+    window.S.invitePreview = null;
+
     if (!token) return;
 
-    if (!window.S.user) {
-      window.S.pendingInviteToken = token;
-      window.setMessage('Sign in first to accept this team invite.', 'info');
-      return;
+    try {
+      const preview = await window.loadInvitePreview(token);
+      window.S.invitePreview = preview;
+    } catch (err) {
+      console.error(err);
+      window.setError(err.message || 'Could not load invite preview.');
     }
+  }
+
+  async function continueInviteFlowAfterAuth() {
+    if (!window.S.pendingInviteToken) return;
+    if (!window.S.user) return;
 
     const ok = window.confirm(
       'In this version of Sabee, you can only belong to one team at a time. ' +
-      'Accepting this invite will replace your current team membership if you already belong to another team. Continue?'
+      'Joining this invited team will replace your current active team membership if you already have one. Continue?'
     );
 
     if (!ok) return;
 
     try {
-      await window.acceptInvite(token);
+      await window.acceptInvite(window.S.pendingInviteToken);
       window.removeInviteTokenFromUrl();
+      window.S.pendingInviteToken = null;
+      window.S.invitePreview = null;
       window.setMessage('Invite accepted. Your active team has been updated.', 'success');
       await refreshActiveTeamState();
     } catch (err) {
@@ -65,6 +115,21 @@
   window.bindGlobal = function () {
     document.addEventListener('click', async e => {
       const target = e.target;
+
+      if (target.id === 'continue-invite-btn') {
+        window.clearError();
+        window.clearMessage();
+
+        if (!window.S.user) {
+          window.setMessage('Please log in or register to continue joining this team.', 'info');
+          window.render();
+          return;
+        }
+
+        await continueInviteFlowAfterAuth();
+        window.render();
+        return;
+      }
 
       if (target.id === 'tab-login') {
         window.clearError();
@@ -102,7 +167,7 @@
           window.clearMessage();
           await window.signInWithEmail({ email, password });
           await refreshActiveTeamState();
-          await handleInviteTokenIfPresent();
+          await continueInviteFlowAfterAuth();
           if (!window.S.activeTeam) {
             await refreshBrowseTeams();
           }
@@ -148,8 +213,10 @@
           window.S.membership = null;
           window.S.teams = [];
           window.S.joinRequests = [];
+          window.S.activeInvite = null;
           window.clearError();
           window.setMessage('Signed out.', 'success');
+          await loadInvitePreviewIfPresent();
           window.render();
         } catch (err) {
           console.error(err);
@@ -253,37 +320,13 @@
 
       if (target.id === 'invite-btn') {
         try {
-          const token = await window.createInvite(window.S.activeTeam.id);
-          const url = `${window.SABEE_CONFIG.APP_URL}?invite=${token}`;
-
-          const area = window.$('invite-link-area');
-          if (area) {
-            area.innerHTML = `
-              <div class="alert alert-success">Invite created. It expires in 72 hours and can be used once.</div>
-              <div class="codebox">${window.esc(url)}</div>
-              <div class="row">
-                <button id="copy-invite-btn" class="btn btn-secondary" type="button">Copy link</button>
-              </div>
-            `;
-          }
+          await window.createInvite(window.S.activeTeam.id);
+          window.S.activeInvite = await window.loadActiveInvite(window.S.activeTeam.id);
+          window.setMessage('Invite link is ready.', 'success');
+          window.render();
         } catch (err) {
           console.error(err);
           window.setError(err.message || 'Could not create invite.');
-          window.render();
-        }
-        return;
-      }
-
-      if (target.id === 'copy-invite-btn') {
-        const codebox = document.querySelector('#invite-link-area .codebox');
-        if (!codebox) return;
-
-        try {
-          await navigator.clipboard.writeText(codebox.textContent);
-          window.setMessage('Invite link copied.', 'success');
-          window.render();
-        } catch {
-          window.setError('Could not copy invite link.');
           window.render();
         }
         return;
@@ -334,15 +377,13 @@
     window.render();
 
     try {
+      await loadInvitePreviewIfPresent();
       await window.bootstrapAuthState();
-      await handleInviteTokenIfPresent();
-
-      if (!window.S.activeTeam && window.S.user) {
-        await refreshBrowseTeams();
-      }
 
       if (window.S.activeTeam) {
         await refreshActiveTeamState();
+      } else if (window.S.user) {
+        await refreshBrowseTeams();
       }
 
       window.sb.auth.onAuthStateChange(async (_event, session) => {
@@ -350,15 +391,13 @@
         window.S.user = session?.user || null;
 
         try {
+          await loadInvitePreviewIfPresent();
           await window.bootstrapAuthState();
-          await handleInviteTokenIfPresent();
-
-          if (!window.S.activeTeam && window.S.user) {
-            await refreshBrowseTeams();
-          }
 
           if (window.S.activeTeam) {
             await refreshActiveTeamState();
+          } else if (window.S.user) {
+            await refreshBrowseTeams();
           }
 
           window.S.loading = false;
@@ -372,6 +411,7 @@
       });
 
       window.bindGlobal();
+      startInviteCountdown();
 
       window.S.loading = false;
       window.render();
