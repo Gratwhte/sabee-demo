@@ -3,8 +3,10 @@
 
   window.obAdd = function () {
     const inp = window.$('ob-name-input');
-    const name = inp.value.trim();
     const err = window.$('ob-error');
+    if (!inp) return;
+
+    const name = inp.value.trim();
 
     if (err) {
       err.textContent = '';
@@ -61,8 +63,8 @@
       await window.loadFromSupabase();
       window.S.selId = window.S.members.length ? window.S.members[0].id : null;
 
-      window.$('onboarding').classList.add('hidden');
-      window.$('app-wrap').classList.add('active');
+      window.$('onboarding')?.classList.add('hidden');
+      window.$('app-wrap')?.classList.add('active');
       window.bindApp();
       window.render();
     } catch (e) {
@@ -187,7 +189,7 @@
     if (!window.S.draft || !window.S.draft.members[i]) return;
 
     const removed = window.S.draft.members[i];
-    if (removed?.id) {
+    if (removed && removed.id) {
       window.S.draft.removedIds.push(removed.id);
     }
 
@@ -561,8 +563,8 @@
     window.bindOnboarding();
 
     if (await window.load()) {
-      window.$('onboarding').classList.add('hidden');
-      window.$('app-wrap').classList.add('active');
+      window.$('onboarding')?.classList.add('hidden');
+      window.$('app-wrap')?.classList.add('active');
       window.bindApp();
       window.render();
     } else {
