@@ -332,6 +332,22 @@
         return;
       }
 
+      if (target.id === 'copy-invite-btn') {
+  const linkEl = window.$('active-invite-link');
+  if (!linkEl) return;
+
+  try {
+    await navigator.clipboard.writeText(linkEl.textContent);
+    window.setMessage('Invite link copied to clipboard.', 'success');
+    window.render();
+  } catch (err) {
+    console.error(err);
+    window.setError('Could not copy invite link.');
+    window.render();
+  }
+  return;
+}
+
       if (target.classList.contains('promote-admin-btn')) {
         const membershipId = target.dataset.membershipId;
         try {
