@@ -167,7 +167,6 @@
 
     if (!window.S.pickStart) {
       window.S.pickStart = ds;
-      window.S.hoverDate = null;
       window.render();
       return;
     }
@@ -176,7 +175,6 @@
     const e = window.dmax(window.S.pickStart, ds);
 
     window.S.pickStart = null;
-    window.S.hoverDate = null;
     window.S.modalRange = { s, e };
     window.render();
   }
@@ -289,22 +287,19 @@
 
     if (target.id === 'login-email' || target.id === 'login-password') {
       e.preventDefault();
-      const btn = window.$('login-btn');
-      if (btn) btn.click();
+      window.$('login-btn')?.click();
       return;
     }
 
     if (target.id === 'reg-full-name' || target.id === 'reg-email' || target.id === 'reg-password') {
       e.preventDefault();
-      const btn = window.$('register-btn');
-      if (btn) btn.click();
+      window.$('register-btn')?.click();
       return;
     }
 
     if (target.id === 'team-name' || target.id === 'creator-display-name') {
       e.preventDefault();
-      const btn = window.$('create-team-btn');
-      if (btn) btn.click();
+      window.$('create-team-btn')?.click();
     }
   }
 
@@ -420,7 +415,6 @@
           window.S.activeInvite = null;
           window.S.selectedMemberId = null;
           window.S.pickStart = null;
-          window.S.hoverDate = null;
           window.S.modalRange = null;
           window.S.editingMember = null;
 
@@ -496,9 +490,8 @@
       }
 
       if (target.classList.contains('approve-request-btn')) {
-        const requestId = target.dataset.requestId;
         try {
-          await window.approveJoinRequest(requestId);
+          await window.approveJoinRequest(target.dataset.requestId);
           await refreshTeamScopedData();
           window.setMessage('Request approved.', 'success');
           window.render();
@@ -511,9 +504,8 @@
       }
 
       if (target.classList.contains('reject-request-btn')) {
-        const requestId = target.dataset.requestId;
         try {
-          await window.rejectJoinRequest(requestId);
+          await window.rejectJoinRequest(target.dataset.requestId);
           await refreshTeamScopedData();
           window.setMessage('Request rejected.', 'success');
           window.render();
@@ -556,9 +548,8 @@
       }
 
       if (target.classList.contains('promote-admin-btn')) {
-        const membershipId = target.dataset.membershipId;
         try {
-          await window.promoteToAdmin(membershipId);
+          await window.promoteToAdmin(target.dataset.membershipId);
           await refreshTeamScopedData();
           window.setMessage('Member promoted to admin.', 'success');
           window.render();
@@ -583,10 +574,8 @@
       }
 
       if (target.classList.contains('summary-card')) {
-        const mid = target.dataset.mid;
-        window.S.selectedMemberId = mid;
+        window.S.selectedMemberId = target.dataset.mid;
         window.S.pickStart = null;
-        window.S.hoverDate = null;
         window.render();
         return;
       }
@@ -609,7 +598,6 @@
 
       if (target.id === 'selection-cancel') {
         window.S.pickStart = null;
-        window.S.hoverDate = null;
         window.render();
         return;
       }
@@ -636,12 +624,11 @@
       }
 
       if (target.classList.contains('entry-delete-btn')) {
-        const entryId = target.dataset.entryId;
         if (!window.canEditSelectedMember()) return;
         if (!window.confirm('Delete this day off entry?')) return;
 
         try {
-          await window.deleteDayOff(entryId);
+          await window.deleteDayOff(target.dataset.entryId);
           await refreshTeamScopedData();
           window.setMessage('Day off entry deleted.', 'success');
           window.render();
@@ -659,8 +646,7 @@
       }
 
       if (target.classList.contains('edit-roster-member-btn')) {
-        const mid = target.dataset.mid;
-        window.S.editingMember = window.rosterMember(mid);
+        window.S.editingMember = window.rosterMember(target.dataset.mid);
         window.render();
         return;
       }
@@ -677,11 +663,10 @@
       }
 
       if (target.classList.contains('delete-roster-member-btn')) {
-        const mid = target.dataset.mid;
         if (!window.confirm('Delete this roster member and all related days off?')) return;
 
         try {
-          await window.deleteRosterMember(mid);
+          await window.deleteRosterMember(target.dataset.mid);
           await refreshTeamScopedData();
           window.setMessage('Roster member deleted.', 'success');
           window.render();
@@ -706,7 +691,6 @@
           window.setError(err.message || 'Could not reset team data.');
           window.render();
         }
-        return;
       }
     });
 
