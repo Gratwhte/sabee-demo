@@ -12,8 +12,9 @@
     joinRequests: [],
 
     pendingInviteToken: null,
-    invitePreview: null,
-    activeInvite: null,
+invitePreview: null,
+inviteContinueRequested: false,
+activeInvite: null,
 
     authMode: 'login',
     landingMode: 'create',
