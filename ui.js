@@ -317,19 +317,23 @@
                 </div>
 
                 <div>
-                  <h3 class="section-title">Invite link</h3>
-                  <div id="invite-link-area" class="stack">
-                    ${
-                      activeInvite && activeInvite.is_active
-                        ? `
-                          <div class="alert alert-success">
-                            Active invite available. Expires in ${window.esc(window.formatRemaining(activeInvite.expires_at))}.
-                          </div>
-                          <div class="codebox">${window.esc(`${window.SABEE_CONFIG.APP_URL}?invite=${activeInvite.token}`)}</div>
-                        `
-                        : '<div class="empty">No active invite yet.</div>'
-                    }
-                  </div>
+  <h3 class="section-title">Invite link</h3>
+  <div id="invite-link-area" class="stack">
+    ${
+      activeInvite && activeInvite.is_active
+        ? `
+          <div class="alert alert-success">
+            Active invite available. Expires in ${window.esc(window.formatRemaining(activeInvite.expires_at))}.
+          </div>
+          <div class="codebox" id="active-invite-link">${window.esc(`${window.SABEE_CONFIG.APP_URL}?invite=${activeInvite.token}`)}</div>
+          <div class="row">
+            <button id="copy-invite-btn" class="btn btn-secondary" type="button">Copy link</button>
+          </div>
+        `
+        : '<div class="empty">No active invite yet.</div>'
+    }
+  </div>
+</div>
                 </div>
               </div>
             </main>
