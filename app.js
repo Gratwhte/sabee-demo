@@ -26,6 +26,27 @@
     }, 1000);
   }
 
+  async function ensureSelfRosterMember() {
+    if (!window.S.activeTeam || !window.S.user) return;
+
+    const alreadyLinked = window.S.rosterMembers.some(m => m.userId === window.S.user.id);
+    if (alreadyLinked) return;
+
+    try {
+      await window.createRosterMember(window.S.activeTeam.id, {
+        name: window.S.profile?.full_name || window.S.user.email?.split('@')[0] || 'Team member',
+        color: window.nextColor(window.S.rosterMembers),
+        maxPTO: window.DEFAULT_MAX_PTO,
+        maxParental: 0,
+        userId: window.S.user.id
+      });
+
+      window.S.rosterMembers = await window.loadRosterMembers(window.S.activeTeam.id);
+    } catch (err) {
+      console.warn('Could not auto-create self roster member', err);
+    }
+  }
+
   async function refreshTeamScopedData() {
     if (!window.S.activeTeam) return;
 
@@ -51,6 +72,8 @@
     window.S.rosterMembers = rosterMembers;
     window.S.daysOff = daysOff;
     window.S.activeInvite = activeInvite;
+
+    await ensureSelfRosterMember();
 
     if (!window.S.rosterMembers.find(m => m.id === window.S.selectedMemberId)) {
       const mine = window.currentUserRosterMember();
@@ -144,7 +167,7 @@
 
     if (!window.S.pickStart) {
       window.S.pickStart = ds;
-      window.S.hoverDate = ds;
+      window.S.hoverDate = null;
       window.render();
       return;
     }
@@ -258,7 +281,36 @@
     }
   }
 
+  function handleAuthEnter(e) {
+    if (e.key !== 'Enter') return;
+
+    const target = e.target instanceof Element ? e.target : null;
+    if (!target) return;
+
+    if (target.id === 'login-email' || target.id === 'login-password') {
+      e.preventDefault();
+      const btn = window.$('login-btn');
+      if (btn) btn.click();
+      return;
+    }
+
+    if (target.id === 'reg-full-name' || target.id === 'reg-email' || target.id === 'reg-password') {
+      e.preventDefault();
+      const btn = window.$('register-btn');
+      if (btn) btn.click();
+      return;
+    }
+
+    if (target.id === 'team-name' || target.id === 'creator-display-name') {
+      e.preventDefault();
+      const btn = window.$('create-team-btn');
+      if (btn) btn.click();
+    }
+  }
+
   window.bindGlobal = function () {
+    document.addEventListener('keydown', handleAuthEnter);
+
     document.addEventListener('click', async e => {
       const target = e.target instanceof Element ? e.target : null;
       if (!target) return;
@@ -355,6 +407,7 @@
       if (target.id === 'sign-out-btn') {
         try {
           await window.signOut();
+
           window.S.session = null;
           window.S.user = null;
           window.S.profile = null;
@@ -369,10 +422,9 @@
           window.S.pickStart = null;
           window.S.hoverDate = null;
           window.S.modalRange = null;
-          window.clearError();
-          window.setMessage('Signed out.', 'success');
-          await loadInvitePreviewIfPresent();
-          window.render();
+          window.S.editingMember = null;
+
+          window.location.replace(window.SABEE_CONFIG.APP_URL);
         } catch (err) {
           console.error(err);
           window.setError(err.message || 'Sign out failed.');
@@ -666,37 +718,6 @@
         await refreshBrowseTeams(target.value || '');
         const box = window.$('browse-team-results');
         if (box) box.innerHTML = window.renderBrowseTeamResults();
-      }
-    });
-
-    document.addEventListener('mouseover', e => {
-      const target = e.target instanceof Element ? e.target : null;
-      if (!target) return;
-
-      const cell = target.closest('.day-cell.cm');
-      if (!cell || !window.S.pickStart || window.S.modalRange) return;
-      if (!window.canEditSelectedMember()) return;
-
-      const ds = cell.dataset.d;
-      if (window.S.hoverDate === ds) return;
-
-      window.S.hoverDate = ds;
-      window.updateCalendarRangeHighlight();
-    });
-
-    document.addEventListener('mouseout', e => {
-      const target = e.target instanceof Element ? e.target : null;
-      if (!target) return;
-
-      const grid = target.closest('#calendar-days');
-      if (!grid) return;
-
-      const related = e.relatedTarget instanceof Element ? e.relatedTarget : null;
-      if (related && grid.contains(related)) return;
-
-      if (window.S.pickStart) {
-        window.S.hoverDate = null;
-        window.updateCalendarRangeHighlight();
       }
     });
   };
