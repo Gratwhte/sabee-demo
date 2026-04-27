@@ -413,6 +413,23 @@
     return h;
   };
 
+  window.updateCalendarRangeHighlight = function () {
+    const cells = document.querySelectorAll('#calendar-days .day-cell.cm');
+
+    cells.forEach(cell => {
+      const ds = cell.dataset.d;
+      cell.classList.remove('in-range');
+
+      if (window.S.pickStart && window.S.hoverDate && !window.S.modalRange) {
+        const rs = window.dmin(window.S.pickStart, window.S.hoverDate);
+        const re = window.dmax(window.S.pickStart, window.S.hoverDate);
+        if (ds >= rs && ds <= re) {
+          cell.classList.add('in-range');
+        }
+      }
+    });
+  };
+
   window.renderSelectionStatus = function () {
     if (!window.S.selectedMemberId) {
       return `<div class="alert alert-info">Select a team member from the right-hand list.</div>`;
