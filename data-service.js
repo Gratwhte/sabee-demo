@@ -40,7 +40,7 @@
     const { error } = await window.sb.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: window.SABEE_CONFIG.APP_URL
+        redirectTo: window.location.href
       }
     });
 
@@ -169,6 +169,24 @@
 
     if (error) throw error;
     return data;
+  };
+
+  window.loadActiveInvite = async function (teamId) {
+    const { data, error } = await window.sb.rpc('get_active_team_invite', {
+      p_team_id: teamId
+    });
+
+    if (error) throw error;
+    return (data && data[0]) || null;
+  };
+
+  window.loadInvitePreview = async function (token) {
+    const { data, error } = await window.sb.rpc('get_invite_preview', {
+      p_token: token
+    });
+
+    if (error) throw error;
+    return (data && data[0]) || null;
   };
 
   window.acceptInvite = async function (token) {
