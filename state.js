@@ -10,10 +10,13 @@
     teams: [],
     browseTeams: [],
     joinRequests: [],
-    pendingInviteToken: null,
 
-    authMode: 'login',        // login | register
-    landingMode: 'create',    // create | join
+    pendingInviteToken: null,
+    invitePreview: null,
+    activeInvite: null,
+
+    authMode: 'login',
+    landingMode: 'create',
     loading: true,
     message: null,
     error: null
@@ -62,5 +65,24 @@
     const url = new URL(window.location.href);
     url.searchParams.delete('invite');
     window.history.replaceState({}, '', url.toString());
+  };
+
+  window.formatRemaining = function (expiresAt) {
+    const end = new Date(expiresAt).getTime();
+    const now = Date.now();
+    const diff = end - now;
+
+    if (diff <= 0) return 'Expired';
+
+    const totalSeconds = Math.floor(diff / 1000);
+    const days = Math.floor(totalSeconds / 86400);
+    const hours = Math.floor((totalSeconds % 86400) / 3600);
+    const mins = Math.floor((totalSeconds % 3600) / 60);
+    const secs = totalSeconds % 60;
+
+    if (days > 0) return `${days}d ${hours}h ${mins}m`;
+    if (hours > 0) return `${hours}h ${mins}m ${secs}s`;
+    if (mins > 0) return `${mins}m ${secs}s`;
+    return `${secs}s`;
   };
 })();
