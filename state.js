@@ -53,10 +53,11 @@
 
     authMode: 'login',
     landingMode: 'create',
-    appView: 'calendar', // calendar | admin
+    appView: 'calendar',
     loading: true,
     message: null,
-    error: null
+    error: null,
+    editingMember: null
   };
 
   window.$ = function (id) {
@@ -169,6 +170,11 @@
     return window.S.rosterMembers.find(m => m.id === id) || null;
   };
 
+  window.currentUserRosterMember = function () {
+    if (!window.S.user) return null;
+    return window.S.rosterMembers.find(m => m.userId === window.S.user.id) || null;
+  };
+
   window.entFor = function (ds) {
     return window.S.daysOff.filter(e => ds >= e.s && ds <= e.e);
   };
@@ -201,5 +207,12 @@
 
   window.isAdmin = function () {
     return ['owner', 'admin'].includes(window.S.membership?.role);
+  };
+
+  window.canEditSelectedMember = function () {
+    const selected = window.rosterMember(window.S.selectedMemberId);
+    if (!selected) return false;
+    if (window.isAdmin()) return true;
+    return !!(window.S.user && selected.userId === window.S.user.id);
   };
 })();
