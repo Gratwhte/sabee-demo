@@ -70,7 +70,8 @@
   async function loadInvitePreviewIfPresent() {
     const token = window.getInviteTokenFromUrl();
     window.S.pendingInviteToken = token || null;
-    window.S.invitePreview = null;
+window.S.invitePreview = null;
+window.S.inviteContinueRequested = false;
 
     if (!token) return;
 
