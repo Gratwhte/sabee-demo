@@ -112,19 +112,21 @@
       const target = e.target;
 
       if (target.id === 'continue-invite-btn') {
-        window.clearError();
-        window.clearMessage();
+  window.clearError();
+  window.clearMessage();
 
-        if (!window.S.user) {
-          window.setMessage('Please log in or register to continue joining this team.', 'info');
-          window.render();
-          return;
-        }
+  if (!window.S.user) {
+    window.S.inviteContinueRequested = true;
+    window.S.authMode = 'login';
+    window.setMessage('Log in or register to continue joining this team.', 'info');
+    window.render();
+    return;
+  }
 
-        await continueInviteFlowAfterAuth();
-        window.render();
-        return;
-      }
+  await continueInviteFlowAfterAuth();
+  window.render();
+  return;
+}
 
       if (target.id === 'tab-login') {
         window.clearError();
