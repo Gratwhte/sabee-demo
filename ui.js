@@ -1,485 +1,361 @@
 (function () {
   'use strict';
 
-  window.buildSwatchesHTML = function (currentColor, contextPrefix, index) {
-    return window.PALETTE.map(clr =>
-      `<button type="button" class="color-swatch${clr === currentColor ? ' active' : ''}"
-        style="background:${clr}" data-ctx="${contextPrefix}" data-i="${index}" data-color="${clr}"
-        aria-label="Color ${clr}${clr === currentColor ? ' (selected)' : ''}"></button>`
-    ).join('');
-  };
-
-  window.closeAllPopovers = function () {
-    document.querySelectorAll('.color-popover.open').forEach(p => p.classList.remove('open'));
-    window.activePopover = null;
-  };
-
-  window.togglePopover = function (triggerEl) {
-    const popover = triggerEl.querySelector('.color-popover') || triggerEl.nextElementSibling;
-    if (!popover || !popover.classList.contains('color-popover')) return;
-
-    if (popover.classList.contains('open')) {
-      popover.classList.remove('open');
-      window.activePopover = null;
-    } else {
-      window.closeAllPopovers();
-      popover.classList.add('open');
-      window.activePopover = popover;
-      const first = popover.querySelector('.color-swatch');
-      if (first) setTimeout(() => first.focus(), 50);
+  window.renderMessageBlock = function () {
+    if (window.S.error) {
+      return `<div class="alert alert-error">${window.esc(window.S.error)}</div>`;
     }
-  };
 
-  document.addEventListener('click', e => {
-    if (
-      window.activePopover &&
-      !e.target.closest('.color-popover-anchor') &&
-      !e.target.closest('.color-popover')
-    ) {
-      window.closeAllPopovers();
+    if (window.S.message) {
+      const map = {
+        info: 'alert-info',
+        success: 'alert-success',
+        warn: 'alert-warn',
+        error: 'alert-error'
+      };
+      return `<div class="alert ${map[window.S.message.type] || 'alert-info'}">${window.esc(window.S.message.text)}</div>`;
     }
-  });
 
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Escape' && window.activePopover) {
-      window.closeAllPopovers();
-    }
-  });
-
-  window.setSyncStatus = function (status) {
-    const el = document.getElementById('sync-status');
-    if (!el) return;
-
-    const map = {
-      saved: { text: '✓ Synced', cls: 'sync-ok' },
-      saving: { text: '↑ Saving…', cls: 'sync-busy' },
-      offline: { text: '⚡ Offline — local only', cls: 'sync-warn' },
-      conflict: { text: '↻ Newer data found…', cls: 'sync-warn' },
-      updated: { text: '↓ Updated from team', cls: 'sync-info' }
-    };
-
-    const s = map[status] || map.saved;
-    el.textContent = s.text;
-    el.className = 'sync-status ' + s.cls;
+    return '';
   };
 
-  window.showOnboarding = function () {
-    window.OB.members = [];
-    window.$('onboarding')?.classList.remove('hidden');
-    window.$('app-wrap')?.classList.remove('active');
-    window.renderOnboarding();
-    setTimeout(() => window.$('ob-name-input')?.focus(), 100);
-  };
-
-  window.renderOnboarding = function () {
-    const list = window.$('ob-members');
-    if (!list) return;
-
-    if (!window.OB.members.length) {
-      list.innerHTML = '<p class="onboarding-empty">No team members added yet.</p>';
-    } else {
-      list.innerHTML = window.OB.members.map((m, i) =>
-        `<div class="onboarding-member">
-          <div class="color-popover-anchor">
-            <span class="onboarding-member-color" style="background:${m.color}"
-              data-ctx="ob" data-i="${i}" role="button" tabindex="0"
-              aria-label="Change color for ${window.esc(m.name)}"></span>
-            <div class="color-popover" aria-label="Choose color">${window.buildSwatchesHTML(m.color, 'ob', i)}</div>
+  window.renderTopbar = function () {
+    const profile = window.S.profile;
+    return `
+      <div class="topbar">
+        <div class="topbar-inner">
+          <div class="brand">
+            <div>
+              <h1>Sa<span>bee</span></h1>
+              <span class="version">beta v6</span>
+            </div>
           </div>
-          <span class="onboarding-member-name">${window.esc(m.name)}</span>
-          <button class="btn btn-ghost onboarding-member-remove" data-i="${i}" aria-label="Remove ${window.esc(m.name)}">✕</button>
-        </div>`
-      ).join('');
+          <div class="topbar-right">
+            ${profile ? `<span class="meta">${window.esc(profile.full_name || profile.email || 'Signed in')}</span>` : ''}
+            ${profile ? `<button class="btn btn-secondary" id="sign-out-btn" type="button">Sign out</button>` : ''}
+          </div>
+        </div>
+      </div>
+    `;
+  };
+
+  window.renderAuthPage = function () {
+    const mode = window.S.authMode;
+
+    return `
+      <div class="page">
+        ${window.renderTopbar()}
+        <div class="hero-wrap">
+          <div class="card auth-card">
+            <div class="auth-head">
+              <h2>Set up your team</h2>
+              <p>Create a new team or sign in to join one.</p>
+            </div>
+
+            <div class="tabs">
+              <button id="tab-login" class="tab-btn ${mode === 'login' ? 'active' : ''}" type="button">Log in</button>
+              <button id="tab-register" class="tab-btn ${mode === 'register' ? 'active' : ''}" type="button">Register</button>
+            </div>
+
+            ${window.renderMessageBlock()}
+
+            <div class="stack">
+              ${mode === 'register' ? `
+                <div class="field">
+                  <label for="reg-full-name">Full name</label>
+                  <input id="reg-full-name" class="input" type="text" placeholder="Your name">
+                </div>
+              ` : ''}
+
+              <div class="field">
+                <label for="${mode === 'register' ? 'reg-email' : 'login-email'}">Email</label>
+                <input id="${mode === 'register' ? 'reg-email' : 'login-email'}" class="input" type="email" placeholder="you@example.com">
+              </div>
+
+              <div class="field">
+                <label for="${mode === 'register' ? 'reg-password' : 'login-password'}">Password</label>
+                <input id="${mode === 'register' ? 'reg-password' : 'login-password'}" class="input" type="password" placeholder="••••••••">
+              </div>
+
+              ${mode === 'register' ? `
+                <div class="legal-box">
+                  <strong>Demo data handling notice</strong><br><br>
+                  Sabee is currently a demo application. If you create an account, we store your email address,
+                  profile information you provide, your team membership, and team-related activity inside Supabase.
+                  Google sign-in may also provide us with your name and avatar if available.<br><br>
+                  This demo is not intended for sensitive personal, financial, health, or legally confidential data.
+                  Please do not upload anything private that you would not want visible to demo administrators or testers.
+                  Features, storage rules, and data retention may change while the demo evolves.
+                </div>
+              ` : ''}
+
+              <div class="row">
+                <button id="${mode === 'register' ? 'register-btn' : 'login-btn'}" class="btn btn-primary" type="button">
+                  ${mode === 'register' ? 'Create account' : 'Log in'}
+                </button>
+                <button id="google-btn" class="btn btn-secondary" type="button">Continue with Google</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  };
+
+  window.renderTeamGatewayPage = function () {
+    const mode = window.S.landingMode;
+
+    return `
+      <div class="page">
+        ${window.renderTopbar()}
+        <div class="hero-wrap">
+          <div class="card auth-card">
+            <div class="auth-head">
+              <h2>Set up your team</h2>
+              <p>Create a new team or request access to an existing one.</p>
+            </div>
+
+            <div class="tabs">
+              <button id="tab-create-team" class="tab-btn ${mode === 'create' ? 'active' : ''}" type="button">Create team</button>
+              <button id="tab-join-team" class="tab-btn ${mode === 'join' ? 'active' : ''}" type="button">Join team</button>
+            </div>
+
+            ${window.renderMessageBlock()}
+
+            ${mode === 'create' ? window.renderCreateTeamPane() : window.renderJoinTeamPane()}
+          </div>
+        </div>
+      </div>
+    `;
+  };
+
+  window.renderCreateTeamPane = function () {
+    return `
+      <div class="stack">
+        <div class="field">
+          <label for="team-name">Team name</label>
+          <input id="team-name" class="input" type="text" placeholder="e.g. Product Europe">
+        </div>
+
+        <div class="field">
+          <label for="creator-display-name">Your display name inside the team</label>
+          <input id="creator-display-name" class="input" type="text" placeholder="e.g. Anna">
+        </div>
+
+        <div class="alert alert-info">
+          Team names must be unique.
+          In this version of Sabee, each account can belong to only one team at a time.
+          If you later join a different team, your active team assignment will switch.
+        </div>
+
+        <div class="row">
+          <button id="create-team-btn" class="btn btn-primary" type="button">Create team</button>
+        </div>
+      </div>
+    `;
+  };
+
+  window.renderJoinTeamPane = function () {
+    return `
+      <div class="stack">
+        <div class="field">
+          <label for="team-search">Search teams by name</label>
+          <input id="team-search" class="input" type="text" placeholder="Search teams...">
+        </div>
+
+        <div class="alert alert-warn">
+          In this demo version, you can only belong to one team at a time.
+          If an admin approves your request for another team, you will lose access to your current team.
+        </div>
+
+        <div id="browse-team-results" class="team-list">
+          ${window.renderBrowseTeamResults()}
+        </div>
+      </div>
+    `;
+  };
+
+  window.renderBrowseTeamResults = function () {
+    if (!window.S.browseTeams.length) {
+      return `<div class="empty">No teams found.</div>`;
     }
 
-    const n = window.OB.members.length;
-    const count = window.$('ob-count');
-    const startBtn = window.$('ob-start-btn');
+    return window.S.browseTeams.map(team => `
+      <div class="team-card">
+        <div>
+          <h4>${window.esc(team.name)}</h4>
+          <p>Team slug: ${window.esc(team.slug)}</p>
+        </div>
+        <div class="inline-actions">
+          <button class="btn btn-primary request-join-btn" data-team-id="${team.id}" data-team-name="${window.esc(team.name)}" type="button">
+            Request access
+          </button>
+        </div>
+      </div>
+    `).join('');
+  };
 
-    if (count) count.textContent = n ? `${n} member${n > 1 ? 's' : ''} added` : '';
-    if (startBtn) startBtn.disabled = n < 1;
+  window.renderAppShell = function () {
+    const team = window.S.activeTeam;
+    const membership = window.S.membership;
+    const role = membership?.role || 'member';
+
+    return `
+      <div class="page">
+        ${window.renderTopbar()}
+        <div class="container">
+          ${window.renderMessageBlock()}
+
+          <div class="shell">
+            <aside class="card sidebar">
+              <div class="stack">
+                <div>
+                  <h3>Profile</h3>
+                  <div class="meta">${window.esc(window.S.profile?.full_name || '')}</div>
+                  <div class="meta">${window.esc(window.S.profile?.email || '')}</div>
+                </div>
+
+                <div class="hr"></div>
+
+                <div>
+                  <h3>Active team</h3>
+                  <div><strong>${window.esc(team?.name || 'No team')}</strong></div>
+                  <div class="meta">Role: ${window.esc(role)}</div>
+                </div>
+
+                <div class="hr"></div>
+
+                <div class="stack">
+                  <button id="refresh-team-data-btn" class="btn btn-secondary" type="button">Refresh</button>
+                  ${(role === 'owner' || role === 'admin') ? `
+                    <button id="invite-btn" class="btn btn-primary" type="button">Invite</button>
+                  ` : ''}
+                </div>
+              </div>
+            </aside>
+
+            <main class="card main-card">
+              <div class="stack">
+                <div>
+                  <h2 style="margin:0 0 8px">Sabee beta v6 foundation</h2>
+                  <div class="meta">
+                    Authentication, teams, join requests, invite links, roles, and profile handling are now active.
+                    The calendar/team time-off UI will be rewired into this team-scoped shell in the next step.
+                  </div>
+                </div>
+
+                <div class="alert alert-info">
+                  Current team access is now based on your authenticated membership. In this version, joining another team replaces your previous team access.
+                </div>
+
+                <div>
+                  <h3 class="section-title">Pending join requests</h3>
+                  <div id="pending-requests-list" class="list">
+                    ${window.renderPendingRequests()}
+                  </div>
+                </div>
+
+                <div>
+                  <h3 class="section-title">Team members</h3>
+                  <div id="team-memberships-list" class="list">
+                    ${window.renderMemberships()}
+                  </div>
+                </div>
+
+                <div>
+                  <h3 class="section-title">Invite link</h3>
+                  <div id="invite-link-area" class="stack">
+                    <div class="empty">No invite generated yet.</div>
+                  </div>
+                </div>
+              </div>
+            </main>
+          </div>
+        </div>
+      </div>
+    `;
+  };
+
+  window.renderPendingRequests = function () {
+    if (!window.S.activeTeam || !window.S.joinRequests.length) {
+      return `<div class="empty">No pending requests.</div>`;
+    }
+
+    return window.S.joinRequests.map(req => `
+      <div class="list-item">
+        <div>
+          <div><strong>${window.esc(req.requester?.full_name || req.requester?.email || 'Unknown user')}</strong></div>
+          <div class="small muted">${window.esc(req.requester?.email || '')}</div>
+          ${req.message ? `<div class="small muted">${window.esc(req.message)}</div>` : ''}
+        </div>
+        <div class="inline-actions">
+          <button class="btn btn-primary approve-request-btn" data-request-id="${req.id}" type="button">Approve</button>
+          <button class="btn btn-secondary reject-request-btn" data-request-id="${req.id}" type="button">Reject</button>
+        </div>
+      </div>
+    `).join('');
+  };
+
+  window.renderMemberships = function () {
+    if (!window.S.teams.length) {
+      return `<div class="empty">No memberships loaded.</div>`;
+    }
+
+    return window.S.teams.map(m => {
+      const badgeClass =
+        m.role === 'owner' ? 'badge-owner' :
+        m.role === 'admin' ? 'badge-admin' :
+        'badge-member';
+
+      const canPromote =
+        window.S.membership?.role === 'owner' &&
+        m.role === 'member';
+
+      return `
+        <div class="list-item">
+          <div>
+            <div><strong>${window.esc(m.profile?.full_name || m.profile?.email || 'Unknown user')}</strong></div>
+            <div class="small muted">${window.esc(m.profile?.email || '')}</div>
+          </div>
+          <div class="inline-actions">
+            <span class="badge ${badgeClass}">${window.esc(m.role)}</span>
+            ${canPromote ? `<button class="btn btn-secondary promote-admin-btn" data-membership-id="${m.id}" type="button">Make admin</button>` : ''}
+          </div>
+        </div>
+      `;
+    }).join('');
   };
 
   window.render = function () {
-    window.renderHeader();
+    const app = window.$('app');
+    if (!app) return;
 
-    if (window.S.admin) {
-      window.$('user-mode')?.classList.add('hidden');
-      window.$('admin-mode')?.classList.remove('hidden');
-      window.renderAdmin();
-    } else {
-      window.$('admin-mode')?.classList.add('hidden');
-      window.$('user-mode')?.classList.remove('hidden');
-      window.renderCalendar();
-      window.renderSidebar();
-      window.renderEntries();
-    }
-  };
-
-  window.renderHeader = function () {
-    const m = window.member(window.S.selId);
-    const dot = window.$('user-color-dot');
-    const name = window.$('active-user-name');
-    const activeUser = window.$('active-user');
-    const toggle = window.$('admin-toggle');
-    const entriesTitle = window.$('entries-title');
-
-    if (dot) dot.style.background = m ? m.color : '#ccc';
-    if (name) name.textContent = m ? m.name : '';
-    if (activeUser) activeUser.classList.toggle('hidden', window.S.admin);
-    if (toggle) toggle.textContent = window.S.admin ? '← Calendar' : '⚙ Admin';
-    if (entriesTitle) entriesTitle.textContent = m ? `${m.name}'s Days Off` : 'Your Days Off';
-  };
-
-  window.renderCalendar = function () {
-    const { y, m } = window.S.month;
-    const monthTitle = window.$('month-title');
-    if (monthTitle) monthTitle.textContent = `${window.MONTHS[m]} ${y}`;
-
-    const days = window.dim(y, m);
-    const start = window.sdow(y, m);
-    const td = window.today();
-    const prevDays = window.dim(m === 0 ? y - 1 : y, m === 0 ? 11 : m - 1);
-
-    let h = '';
-
-    for (let i = 0; i < start; i++) {
-      const d = prevDays - start + 1 + i;
-      h += `<div class="day-cell other-month" aria-hidden="true"><span class="day-number">${d}</span></div>`;
-    }
-
-    for (let d = 1; d <= days; d++) {
-      const ds = window.dstr(y, m, d);
-      const dt = new Date(y, m, d);
-      const wk = dt.getDay() === 0 || dt.getDay() === 6;
-      const isToday = ds === td;
-      const selStart = window.S.pickStart === ds;
-
-      let inRange = false;
-      if (window.S.pickStart && window.S.hoverDate && !window.S.modalRange) {
-        const rs = window.dmin(window.S.pickStart, window.S.hoverDate);
-        const re = window.dmax(window.S.pickStart, window.S.hoverDate);
-        inRange = ds >= rs && ds <= re;
-      }
-
-      const cls = [
-        'day-cell',
-        'cm',
-        wk ? 'weekend' : '',
-        isToday ? 'today' : '',
-        selStart ? 'selection-start' : '',
-        inRange ? 'in-range' : ''
-      ].filter(Boolean).join(' ');
-
-      const entries = window.entFor(ds);
-
-      h += `<div class="${cls}" data-d="${ds}" role="gridcell" tabindex="0"
-        aria-label="${window.fmtL(ds)}${entries.length ? '. ' + entries.length + ' day(s) off logged' : ''}">
-        <span class="day-number">${d}</span>
-        <div class="day-dots">${window.renderDots(entries)}</div>
-      </div>`;
-    }
-
-    const tot = start + days;
-    const rem = (7 - (tot % 7)) % 7;
-    for (let i = 1; i <= rem; i++) {
-      h += `<div class="day-cell other-month" aria-hidden="true"><span class="day-number">${i}</span></div>`;
-    }
-
-    const grid = window.$('calendar-days');
-    if (grid) grid.innerHTML = h;
-
-    window.updateSelectionStatus();
-  };
-
-  window.updateRangeHighlight = function () {
-    const cells = document.querySelectorAll('.day-cell.cm');
-
-    cells.forEach(cell => {
-      const ds = cell.dataset.d;
-      cell.classList.remove('in-range');
-
-      if (window.S.pickStart && window.S.hoverDate && !window.S.modalRange) {
-        const rs = window.dmin(window.S.pickStart, window.S.hoverDate);
-        const re = window.dmax(window.S.pickStart, window.S.hoverDate);
-        if (ds >= rs && ds <= re) {
-          cell.classList.add('in-range');
-        }
-      }
-    });
-  };
-
-  window.renderDots = function (entries) {
-    if (!entries.length) return '';
-
-    const MAX = 7;
-    let show = entries;
-    let extra = false;
-
-    if (entries.length > MAX) {
-      show = entries.slice(0, MAX - 1);
-      extra = true;
-    }
-
-    let h = show.map(e => {
-      const m = window.member(e.mid);
-      if (!m) return '';
-
-      if (e.t === 'sick') {
-        return `<span class="dot dot-sick" style="color:${m.color}; border-color:${m.color}" aria-label="${window.esc(m.name)}: Sick Leave"></span>`;
-      }
-
-      if (e.t === 'parental') {
-        return `<span class="dot dot-parental" style="background:${m.color}" aria-label="${window.esc(m.name)}: Parental Leave"></span>`;
-      }
-
-      return `<span class="dot" style="background:${m.color}" aria-label="${window.esc(m.name)}: PTO"></span>`;
-    }).join('');
-
-    if (extra) {
-      const r = entries.length - (MAX - 1);
-      h += `<span class="dot-ellipsis" title="+${r} more" aria-label="${r} more entries">…</span>`;
-    }
-
-    return h;
-  };
-
-  window.updateSelectionStatus = function () {
-    const box = window.$('selection-status');
-    const text = window.$('selection-text');
-
-    if (!box || !text) return;
-
-    if (window.S.pickStart && !window.S.modalRange) {
-      box.classList.remove('hidden');
-      text.textContent = `Start: ${window.fmtS(window.S.pickStart)} — click another day to complete`;
-    } else {
-      box.classList.add('hidden');
-    }
-  };
-
-  window.renderSidebar = function () {
-    const list = window.$('summary-list');
-    if (!list) return;
-
-    if (!window.S.members.length) {
-      list.innerHTML = '<p class="empty-note">No team members yet.</p>';
+    if (window.S.loading) {
+      app.innerHTML = `
+        <div class="page">
+          ${window.renderTopbar()}
+          <div class="hero-wrap">
+            <div class="card auth-card">
+              <div class="auth-head">
+                <h2>Loading Sabee…</h2>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
       return;
     }
 
-    list.innerHTML = window.S.members.map(m => {
-      const usedPTO = window.usedDays(m.id, 'pto');
-      const usedParental = window.usedDays(m.id, 'parental');
-
-      return `<button type="button" class="summary-card ${window.S.selId === m.id ? 'active' : ''}" data-mid="${m.id}" style="--member-color:${m.color}">
-        <div class="summary-card-head">
-          <span class="summary-card-name">${window.esc(m.name)}</span>
-          <span class="summary-card-dot" style="background:${m.color}"></span>
-        </div>
-
-        <div class="summary-meter-block">
-          <div class="summary-label-row">
-            <span>PTO</span>
-            <span>${usedPTO}/${m.maxPTO}</span>
-          </div>
-          <div class="meter">
-            <span class="meter-fill ${window.statusCls(usedPTO, m.maxPTO)}" style="width:${Math.min(100, m.maxPTO ? (usedPTO / m.maxPTO) * 100 : 0)}%"></span>
-          </div>
-        </div>
-
-        <div class="summary-meter-block">
-          <div class="summary-label-row">
-            <span>Parental</span>
-            <span>${usedParental}/${m.maxParental}</span>
-          </div>
-          <div class="meter">
-            <span class="meter-fill ${window.statusCls(usedParental, m.maxParental)}" style="width:${Math.min(100, m.maxParental ? (usedParental / m.maxParental) * 100 : 0)}%"></span>
-          </div>
-        </div>
-      </button>`;
-    }).join('');
-  };
-
-  window.renderEntries = function () {
-    const list = window.$('entries-list');
-    if (!list) return;
-
-    const m = window.member(window.S.selId);
-    if (!m) {
-      list.innerHTML = '<p class="empty-note">Select a team member.</p>';
+    if (!window.S.user) {
+      app.innerHTML = window.renderAuthPage();
       return;
     }
 
-    const entries = window.S.daysOff
-      .filter(e => e.mid === m.id)
-      .sort((a, b) => a.s.localeCompare(b.s));
-
-    if (!entries.length) {
-      list.innerHTML = '<p class="empty-note">No days off logged yet.</p>';
+    if (!window.S.activeTeam) {
+      app.innerHTML = window.renderTeamGatewayPage();
       return;
     }
 
-    list.innerHTML = entries.map(e => {
-      const days = window.dspan(e.s, e.e);
-      return `<div class="entry-card">
-        <div class="entry-main">
-          <div class="entry-title">${window.TYPE_ICON[e.t]} ${window.TYPE_LABEL[e.t]}</div>
-          <div class="entry-meta">${window.fmtS(e.s)} → ${window.fmtS(e.e)} · ${days} day${days > 1 ? 's' : ''}</div>
-        </div>
-        <button type="button" class="btn btn-ghost entry-delete" data-eid="${e.id}" aria-label="Delete entry">✕</button>
-      </div>`;
-    }).join('');
-  };
-
-  window.renderAdmin = function () {
-    if (!window.S.draft) {
-      window.S.draft = {
-        members: window.S.members.map(m => ({ ...m })),
-        removedIds: []
-      };
-    }
-
-    const list = window.$('admin-members');
-    if (!list) return;
-
-    const rows = window.S.draft.members.map((m, i) => {
-      const usedPTO = window.usedDays(m.id, 'pto');
-      const usedParental = window.usedDays(m.id, 'parental');
-
-      return `<div class="admin-member-row">
-        <div class="admin-member-main">
-          <div class="color-popover-anchor">
-            <button type="button" class="admin-color-trigger" style="background:${m.color}" aria-label="Change color for ${window.esc(m.name || 'member')}"></button>
-            <div class="color-popover" aria-label="Choose color">${window.buildSwatchesHTML(m.color, 'admin', i)}</div>
-          </div>
-
-          <input id="an${i}" class="input admin-name-input" data-i="${i}" value="${window.esc(m.name)}" placeholder="Name" />
-
-          <div class="admin-number-group">
-            <label>PTO</label>
-            <input class="input admin-pto-input" data-i="${i}" type="number" min="0" value="${m.maxPTO}" />
-          </div>
-
-          <div class="admin-number-group">
-            <label>Parental</label>
-            <input class="input admin-parental-input" data-i="${i}" type="number" min="0" value="${m.maxParental}" />
-          </div>
-
-          <button type="button" class="btn btn-ghost admin-remove" data-i="${i}" aria-label="Remove member">✕</button>
-        </div>
-
-        <div class="admin-usage-row">
-          <span>Used PTO: ${usedPTO}</span>
-          <span>Used Parental: ${usedParental}</span>
-        </div>
-      </div>`;
-    }).join('');
-
-    list.innerHTML = rows || '<p class="empty-note">No members yet.</p>';
-    window.refreshAdminSaveState();
-  };
-
-  window.refreshAdminSaveState = function () {
-    const saveBtn = window.$('admin-save-btn');
-    if (saveBtn) saveBtn.disabled = !window.S.draftDirty;
-  };
-
-  window.openModal = function (start, end) {
-    const m = window.member(window.S.selId);
-    if (!m) return;
-
-    window.S.modalRange = { s: start, e: end };
-    window.S.prevFocus = document.activeElement;
-
-    const memberEl = window.$('modal-member');
-    const datesEl = window.$('modal-dates');
-    const detailPto = window.$('modal-detail-pto');
-    const detailSick = window.$('modal-detail-sick');
-    const detailParental = window.$('modal-detail-parental');
-    const errorEl = window.$('modal-error');
-    const warningEl = window.$('modal-warning');
-    const parentalBtn = window.$('modal-btn-parental');
-    const overlay = window.$('modal-overlay');
-
-    if (memberEl) memberEl.textContent = m.name;
-    if (datesEl) datesEl.textContent = `${window.fmtS(start)} → ${window.fmtS(end)}`;
-
-    const rangeDays = window.dspan(start, end);
-    const usedPTO = window.usedDays(m.id, 'pto');
-    const usedParental = window.usedDays(m.id, 'parental');
-
-    if (detailPto) detailPto.textContent = `${rangeDays} day${rangeDays > 1 ? 's' : ''} • used ${usedPTO}/${m.maxPTO}`;
-    if (detailSick) detailSick.textContent = `${rangeDays} day${rangeDays > 1 ? 's' : ''}`;
-    if (detailParental) detailParental.textContent = `${rangeDays} day${rangeDays > 1 ? 's' : ''} • used ${usedParental}/${m.maxParental}`;
-
-    if (errorEl) {
-      errorEl.textContent = '';
-      errorEl.style.display = 'none';
-    }
-
-    if (warningEl) {
-      warningEl.textContent = '';
-      warningEl.style.display = 'none';
-    }
-
-    const hasOverlap = window.overlap(m.id, start, end);
-    if (hasOverlap && errorEl) {
-      errorEl.textContent = 'This range overlaps with an existing day-off entry.';
-      errorEl.style.display = 'block';
-    }
-
-    const ptoBtn = window.$('modal-btn-pto');
-    const sickBtn = window.$('modal-btn-sick');
-
-    if (ptoBtn) ptoBtn.disabled = hasOverlap;
-    if (sickBtn) sickBtn.disabled = hasOverlap;
-    if (parentalBtn) parentalBtn.disabled = m.maxParental <= 0 || hasOverlap;
-
-    if (overlay) overlay.classList.remove('hidden');
-
-    setTimeout(() => {
-      const btn = window.$('modal-btn-pto');
-      if (btn && !btn.disabled) btn.focus();
-    }, 30);
-  };
-
-  window.closeModal = function () {
-    window.S.modalRange = null;
-    const overlay = window.$('modal-overlay');
-    if (overlay) overlay.classList.add('hidden');
-
-    if (window.S.prevFocus && typeof window.S.prevFocus.focus === 'function') {
-      window.S.prevFocus.focus();
-    }
-  };
-
-  window.showTooltip = function (cell, ds) {
-    const tip = window.$('tooltip');
-    if (!tip) return;
-
-    const entries = window.entFor(ds);
-    if (!entries.length) {
-      tip.classList.remove('visible');
-      return;
-    }
-
-    tip.innerHTML = entries.map(e => {
-      const m = window.member(e.mid);
-      if (!m) return '';
-      return `<div class="tooltip-entry">
-        <span class="tooltip-dot" style="background:${m.color}"></span>
-        <span>${window.esc(m.name)} — ${window.TYPE_LABEL[e.t]}</span>
-      </div>`;
-    }).join('');
-
-    const r = cell.getBoundingClientRect();
-    tip.style.left = `${window.scrollX + r.left + r.width / 2}px`;
-    tip.style.top = `${window.scrollY + r.top - 8}px`;
-    tip.classList.add('visible');
-  };
-
-  window.hideTooltip = function () {
-    const tip = window.$('tooltip');
-    if (tip) tip.classList.remove('visible');
+    app.innerHTML = window.renderAppShell();
   };
 })();
