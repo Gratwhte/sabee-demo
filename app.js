@@ -665,21 +665,34 @@
     });
 
     document.addEventListener('mouseover', e => {
-      const cell = e.target.closest('.day-cell.cm');
-      if (!cell || !window.S.pickStart || window.S.modalRange) return;
+  const target = e.target instanceof Element ? e.target : null;
+  if (!target) return;
 
-      window.S.hoverDate = cell.dataset.d;
-      window.render();
-    });
+  const cell = target.closest('.day-cell.cm');
+  if (!cell || !window.S.pickStart || window.S.modalRange) return;
 
-    document.addEventListener('mouseleave', e => {
-      const grid = e.target.closest('#calendar-days');
-      if (!grid) return;
-      if (window.S.pickStart) {
-        window.S.hoverDate = null;
-        window.render();
-      }
-    });
+  window.S.hoverDate = cell.dataset.d;
+  window.render();
+});
+
+document.addEventListener('mouseout', e => {
+  const target = e.target instanceof Element ? e.target : null;
+  if (!target) return;
+
+  const grid = target.closest('#calendar-days');
+  if (!grid) return;
+
+  const related = e.relatedTarget instanceof Element ? e.relatedTarget : null;
+
+  if (related && grid.contains(related)) {
+    return;
+  }
+
+  if (window.S.pickStart) {
+    window.S.hoverDate = null;
+    window.render();
+  }
+});
   };
 
   window.init = async function () {
