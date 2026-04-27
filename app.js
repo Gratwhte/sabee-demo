@@ -96,11 +96,12 @@
 
     try {
       await window.acceptInvite(window.S.pendingInviteToken);
-      window.removeInviteTokenFromUrl();
-      window.S.pendingInviteToken = null;
-      window.S.invitePreview = null;
-      window.setMessage('Invite accepted. Your active team has been updated.', 'success');
-      await refreshActiveTeamState();
+window.removeInviteTokenFromUrl();
+window.S.pendingInviteToken = null;
+window.S.invitePreview = null;
+window.S.inviteContinueRequested = false;
+window.setMessage('Invite accepted. Your active team has been updated.', 'success');
+await refreshActiveTeamState();
     } catch (err) {
       console.error(err);
       window.setError(err.message || 'Could not accept invite.');
