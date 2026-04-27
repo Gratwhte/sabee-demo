@@ -66,18 +66,6 @@
     return data;
   };
 
-  window.updateProfile = async function (patch) {
-    const user = await window.getCurrentUser();
-    if (!user) throw new Error('Not authenticated');
-
-    const { error } = await window.sb
-      .from('profiles')
-      .update(patch)
-      .eq('id', user.id);
-
-    if (error) throw error;
-  };
-
   window.createTeam = async function ({ teamName, creatorDisplayName }) {
     const { data, error } = await window.sb.rpc('create_team_with_owner', {
       p_team_name: teamName,
@@ -198,7 +186,7 @@
     return data;
   };
 
-  window.loadTeamMembers = async function (teamId) {
+  window.loadTeamMemberships = async function (teamId) {
     const { data, error } = await window.sb
       .from('team_memberships')
       .select('*, profile:profiles(id, email, full_name)')
@@ -215,6 +203,120 @@
     });
 
     if (error) throw error;
+  };
+
+  window.loadRosterMembers = async function (teamId) {
+    const { data, error } = await window.sb
+      .from('members')
+      .select('*')
+      .eq('team_id', teamId)
+      .order('created_at', { ascending: true });
+
+    if (error) throw error;
+    return (data || []).map(row => ({
+      id: row.id,
+      name: row.name,
+      color: row.color,
+      maxPTO: row.max_pto,
+      maxParental: row.max_parental,
+      userId: row.user_id || null
+    }));
+  };
+
+  window.loadDaysOff = async function (teamId) {
+    const { data, error } = await window.sb
+      .from('days_off')
+      .select('*')
+      .eq('team_id', teamId)
+      .order('start_date', { ascending: true });
+
+    if (error) throw error;
+    return (data || []).map(row => ({
+      id: row.id,
+      mid: row.member_id,
+      s: row.start_date,
+      e: row.end_date,
+      t: row.type,
+      note: row.note || ''
+    }));
+  };
+
+  window.createRosterMember = async function (teamId, member) {
+    const { error } = await window.sb
+      .from('members')
+      .insert([{
+        team_id: teamId,
+        user_id: member.userId || null,
+        name: member.name,
+        color: member.color,
+        max_pto: member.maxPTO,
+        max_parental: member.maxParental
+      }]);
+
+    if (error) throw error;
+  };
+
+  window.updateRosterMember = async function (member) {
+    const { error } = await window.sb
+      .from('members')
+      .update({
+        name: member.name,
+        color: member.color,
+        max_pto: member.maxPTO,
+        max_parental: member.maxParental
+      })
+      .eq('id', member.id);
+
+    if (error) throw error;
+  };
+
+  window.deleteRosterMember = async function (memberId) {
+    const { error } = await window.sb
+      .from('members')
+      .delete()
+      .eq('id', memberId);
+
+    if (error) throw error;
+  };
+
+  window.createDayOff = async function (teamId, entry) {
+    const { error } = await window.sb
+      .from('days_off')
+      .insert([{
+        team_id: teamId,
+        member_id: entry.mid,
+        start_date: entry.s,
+        end_date: entry.e,
+        type: entry.t,
+        note: entry.note || null
+      }]);
+
+    if (error) throw error;
+  };
+
+  window.deleteDayOff = async function (entryId) {
+    const { error } = await window.sb
+      .from('days_off')
+      .delete()
+      .eq('id', entryId);
+
+    if (error) throw error;
+  };
+
+  window.clearTeamAppData = async function (teamId) {
+    const { error: daysError } = await window.sb
+      .from('days_off')
+      .delete()
+      .eq('team_id', teamId);
+
+    if (daysError) throw daysError;
+
+    const { error: membersError } = await window.sb
+      .from('members')
+      .delete()
+      .eq('team_id', teamId);
+
+    if (membersError) throw membersError;
   };
 
   window.bootstrapAuthState = async function () {
