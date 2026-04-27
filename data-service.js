@@ -1,306 +1,225 @@
 (function () {
   'use strict';
 
-  window._realtimeChannel = null;
-
-  window.dbMemberToUi = function (row) {
-    return {
-      id: row.id,
-      name: row.name,
-      color: row.color,
-      maxPTO: row.max_pto,
-      maxParental: row.max_parental
-    };
+  window.getSession = async function () {
+    const { data, error } = await window.sb.auth.getSession();
+    if (error) throw error;
+    return data.session;
   };
 
-  window.uiMemberToDb = function (member) {
-    return {
-      id: member.id,
-      workspace_id: window.SABEE_CONFIG.WORKSPACE_ID,
-      name: member.name,
-      color: member.color,
-      max_pto: member.maxPTO,
-      max_parental: member.maxParental
-    };
+  window.getCurrentUser = async function () {
+    const { data, error } = await window.sb.auth.getUser();
+    if (error) throw error;
+    return data.user;
   };
 
-  window.dbDayOffToUi = function (row) {
-    return {
-      id: row.id,
-      mid: row.member_id,
-      s: row.start_date,
-      e: row.end_date,
-      t: row.type,
-      note: row.note || ''
-    };
+  window.signUpWithEmail = async function ({ email, password, fullName }) {
+    const { error } = await window.sb.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          full_name: fullName
+        }
+      }
+    });
+
+    if (error) throw error;
   };
 
-  window.uiDayOffToDb = function (entry) {
-    return {
-      id: entry.id,
-      workspace_id: window.SABEE_CONFIG.WORKSPACE_ID,
-      member_id: entry.mid,
-      start_date: entry.s,
-      end_date: entry.e,
-      type: entry.t,
-      note: entry.note || null
-    };
+  window.signInWithEmail = async function ({ email, password }) {
+    const { error } = await window.sb.auth.signInWithPassword({
+      email,
+      password
+    });
+
+    if (error) throw error;
   };
 
-  window.loadFromSupabase = async function () {
-    const workspaceId = window.SABEE_CONFIG.WORKSPACE_ID;
+  window.signInWithGoogle = async function () {
+    const { error } = await window.sb.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.SABEE_CONFIG.APP_URL
+      }
+    });
 
-    const [membersRes, daysOffRes] = await Promise.all([
-      window.sb
-        .from('members')
-        .select('*')
-        .eq('workspace_id', workspaceId)
-        .order('created_at', { ascending: true }),
+    if (error) throw error;
+  };
 
-      window.sb
-        .from('days_off')
-        .select('*')
-        .eq('workspace_id', workspaceId)
-        .order('start_date', { ascending: true })
+  window.signOut = async function () {
+    const { error } = await window.sb.auth.signOut();
+    if (error) throw error;
+  };
+
+  window.loadProfile = async function () {
+    const user = await window.getCurrentUser();
+    if (!user) return null;
+
+    const { data, error } = await window.sb
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single();
+
+    if (error) throw error;
+    return data;
+  };
+
+  window.updateProfile = async function (patch) {
+    const user = await window.getCurrentUser();
+    if (!user) throw new Error('Not authenticated');
+
+    const { error } = await window.sb
+      .from('profiles')
+      .update(patch)
+      .eq('id', user.id);
+
+    if (error) throw error;
+  };
+
+  window.createTeam = async function ({ teamName, creatorDisplayName }) {
+    const { data, error } = await window.sb.rpc('create_team_with_owner', {
+      p_team_name: teamName,
+      p_creator_name: creatorDisplayName || null
+    });
+
+    if (error) throw error;
+    return data;
+  };
+
+  window.loadMyMembership = async function () {
+    const user = await window.getCurrentUser();
+    if (!user) return null;
+
+    const { data, error } = await window.sb
+      .from('team_memberships')
+      .select('*, team:teams(*)')
+      .eq('user_id', user.id)
+      .single();
+
+    if (error && error.code !== 'PGRST116') throw error;
+    return data || null;
+  };
+
+  window.loadBrowseTeams = async function (search = '') {
+    let q = window.sb
+      .from('teams')
+      .select('id, name, slug, created_at')
+      .order('name', { ascending: true });
+
+    if (search.trim()) {
+      q = q.ilike('name', `%${search.trim()}%`);
+    }
+
+    const { data, error } = await q.limit(50);
+    if (error) throw error;
+    return data || [];
+  };
+
+  window.createJoinRequest = async function ({ teamId, message }) {
+    const user = await window.getCurrentUser();
+    if (!user) throw new Error('Not authenticated');
+
+    const { error } = await window.sb
+      .from('team_join_requests')
+      .insert([{
+        team_id: teamId,
+        requester_user_id: user.id,
+        message: message || null,
+        status: 'pending'
+      }]);
+
+    if (error) throw error;
+  };
+
+  window.loadPendingRequestsForMyTeam = async function (teamId) {
+    const { data, error } = await window.sb
+      .from('team_join_requests')
+      .select('*, requester:profiles!team_join_requests_requester_user_id_fkey(id, email, full_name)')
+      .eq('team_id', teamId)
+      .eq('status', 'pending')
+      .order('created_at', { ascending: true });
+
+    if (error) throw error;
+    return data || [];
+  };
+
+  window.approveJoinRequest = async function (requestId) {
+    const { error } = await window.sb.rpc('approve_join_request', {
+      p_request_id: requestId
+    });
+
+    if (error) throw error;
+  };
+
+  window.rejectJoinRequest = async function (requestId) {
+    const { error } = await window.sb.rpc('reject_join_request', {
+      p_request_id: requestId
+    });
+
+    if (error) throw error;
+  };
+
+  window.createInvite = async function (teamId) {
+    const { data, error } = await window.sb.rpc('create_team_invite', {
+      p_team_id: teamId,
+      p_expiry_hours: 72
+    });
+
+    if (error) throw error;
+    return data;
+  };
+
+  window.acceptInvite = async function (token) {
+    const { data, error } = await window.sb.rpc('accept_team_invite', {
+      p_token: token
+    });
+
+    if (error) throw error;
+    return data;
+  };
+
+  window.loadTeamMembers = async function (teamId) {
+    const { data, error } = await window.sb
+      .from('team_memberships')
+      .select('*, profile:profiles(id, email, full_name)')
+      .eq('team_id', teamId)
+      .order('created_at', { ascending: true });
+
+    if (error) throw error;
+    return data || [];
+  };
+
+  window.promoteToAdmin = async function (membershipId) {
+    const { error } = await window.sb.rpc('promote_member_to_admin', {
+      p_membership_id: membershipId
+    });
+
+    if (error) throw error;
+  };
+
+  window.bootstrapAuthState = async function () {
+    const session = await window.getSession();
+    const user = session?.user || null;
+
+    window.S.session = session;
+    window.S.user = user;
+
+    if (!user) {
+      window.S.profile = null;
+      window.S.activeTeam = null;
+      window.S.membership = null;
+      return;
+    }
+
+    const [profile, membership] = await Promise.all([
+      window.loadProfile(),
+      window.loadMyMembership()
     ]);
 
-    if (membersRes.error) throw membersRes.error;
-    if (daysOffRes.error) throw daysOffRes.error;
-
-    window.S.members = (membersRes.data || []).map(window.dbMemberToUi);
-    window.S.daysOff = (daysOffRes.data || []).map(window.dbDayOffToUi);
-
-    if (!window.S.members.find(m => m.id === window.S.selId)) {
-      window.S.selId = window.S.members.length ? window.S.members[0].id : null;
-    }
-
-    try {
-      localStorage.setItem(
-        window.STORAGE_KEY,
-        JSON.stringify({
-          members: window.S.members,
-          daysOff: window.S.daysOff
-        })
-      );
-    } catch (_) {}
-  };
-
-  window.load = async function () {
-    try {
-      await window.loadFromSupabase();
-      window.setSyncStatus('saved');
-      window.startRealtime();
-      return window.S.members.length > 0;
-    } catch (e) {
-      console.warn('Supabase load failed, trying localStorage', e);
-      window.setSyncStatus('offline');
-    }
-
-    try {
-      const d = JSON.parse(localStorage.getItem(window.STORAGE_KEY));
-      if (d && Array.isArray(d.members) && d.members.length) {
-        window.S.members = d.members;
-        window.S.daysOff = (d.daysOff || []).map(e => ({ ...e }));
-        window.S.selId = window.S.members[0].id;
-        return true;
-      }
-    } catch (e) {
-      console.error('localStorage load failed', e);
-    }
-
-    return false;
-  };
-
-  window.save = async function () {
-    try {
-      localStorage.setItem(
-        window.STORAGE_KEY,
-        JSON.stringify({
-          members: window.S.members,
-          daysOff: window.S.daysOff
-        })
-      );
-    } catch (_) {}
-
-    window.setSyncStatus('saved');
-  };
-
-  window.stopRealtime = function () {
-    if (window._realtimeChannel) {
-      window.sb.removeChannel(window._realtimeChannel);
-      window._realtimeChannel = null;
-    }
-  };
-
-  window.startRealtime = function () {
-    window.stopRealtime();
-
-    const workspaceId = window.SABEE_CONFIG.WORKSPACE_ID;
-
-    window._realtimeChannel = window.sb
-      .channel('sabee-realtime')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'members',
-          filter: `workspace_id=eq.${workspaceId}`
-        },
-        async () => {
-          try {
-            await window.loadFromSupabase();
-            window.setSyncStatus('updated');
-            if (!window.S.admin) window.render();
-            setTimeout(() => window.setSyncStatus('saved'), 1500);
-          } catch (e) {
-            console.warn('Realtime members refresh failed', e);
-            window.setSyncStatus('offline');
-          }
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'days_off',
-          filter: `workspace_id=eq.${workspaceId}`
-        },
-        async () => {
-          try {
-            await window.loadFromSupabase();
-            window.setSyncStatus('updated');
-            if (!window.S.admin) window.render();
-            setTimeout(() => window.setSyncStatus('saved'), 1500);
-          } catch (e) {
-            console.warn('Realtime days_off refresh failed', e);
-            window.setSyncStatus('offline');
-          }
-        }
-      )
-      .subscribe(status => {
-        if (status === 'SUBSCRIBED') {
-          window.setSyncStatus('saved');
-        }
-      });
-  };
-
-  window.createMember = async function (member) {
-    window.setSyncStatus('saving');
-
-    const { error } = await window.sb
-      .from('members')
-      .insert([window.uiMemberToDb(member)]);
-
-    if (error) {
-      window.setSyncStatus('offline');
-      throw error;
-    }
-
-    window.setSyncStatus('saved');
-  };
-
-  window.updateMember = async function (member) {
-    window.setSyncStatus('saving');
-
-    const { error } = await window.sb
-      .from('members')
-      .update({
-        name: member.name,
-        color: member.color,
-        max_pto: member.maxPTO,
-        max_parental: member.maxParental
-      })
-      .eq('id', member.id)
-      .eq('workspace_id', window.SABEE_CONFIG.WORKSPACE_ID);
-
-    if (error) {
-      window.setSyncStatus('offline');
-      throw error;
-    }
-
-    window.setSyncStatus('saved');
-  };
-
-  window.deleteMember = async function (memberId) {
-    window.setSyncStatus('saving');
-
-    const { error } = await window.sb
-      .from('members')
-      .delete()
-      .eq('id', memberId)
-      .eq('workspace_id', window.SABEE_CONFIG.WORKSPACE_ID);
-
-    if (error) {
-      window.setSyncStatus('offline');
-      throw error;
-    }
-
-    window.setSyncStatus('saved');
-  };
-
-  window.createDayOff = async function (entry) {
-    window.setSyncStatus('saving');
-
-    const { error } = await window.sb
-      .from('days_off')
-      .insert([window.uiDayOffToDb(entry)]);
-
-    if (error) {
-      window.setSyncStatus('offline');
-      throw error;
-    }
-
-    window.setSyncStatus('saved');
-  };
-
-  window.deleteDayOff = async function (entryId) {
-    window.setSyncStatus('saving');
-
-    const { error } = await window.sb
-      .from('days_off')
-      .delete()
-      .eq('id', entryId)
-      .eq('workspace_id', window.SABEE_CONFIG.WORKSPACE_ID);
-
-    if (error) {
-      window.setSyncStatus('offline');
-      throw error;
-    }
-
-    window.setSyncStatus('saved');
-  };
-
-  window.clearAllWorkspaceData = async function () {
-    const workspaceId = window.SABEE_CONFIG.WORKSPACE_ID;
-
-    window.setSyncStatus('saving');
-
-    const { error: daysOffError } = await window.sb
-      .from('days_off')
-      .delete()
-      .eq('workspace_id', workspaceId);
-
-    if (daysOffError) {
-      window.setSyncStatus('offline');
-      throw daysOffError;
-    }
-
-    const { error: membersError } = await window.sb
-      .from('members')
-      .delete()
-      .eq('workspace_id', workspaceId);
-
-    if (membersError) {
-      window.setSyncStatus('offline');
-      throw membersError;
-    }
-
-    try {
-      localStorage.removeItem(window.STORAGE_KEY);
-    } catch (_) {}
-
-    window.setSyncStatus('saved');
+    window.S.profile = profile;
+    window.S.membership = membership;
+    window.S.activeTeam = membership?.team || null;
   };
 })();
