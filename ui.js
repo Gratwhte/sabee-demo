@@ -102,8 +102,12 @@
         <div class="hero-wrap">
           <div class="card auth-card">
             <div class="auth-head">
-              <h2>${window.S.pendingInviteToken ? 'Sign in to continue' : 'Set up your team'}</h2>
-              <p>${window.S.pendingInviteToken ? 'Authenticate first, then we will continue your invite flow.' : 'Create a new team or sign in to join one.'}</p>
+              <h2>${window.S.pendingInviteToken && window.S.inviteContinueRequested ? 'Sign in to continue' : 'Set up your team'}</h2>
+<p>${
+  window.S.pendingInviteToken && window.S.inviteContinueRequested
+    ? 'Log in or register to continue joining this invited team.'
+    : 'Create a new team or sign in to join one.'
+}</p>
             </div>
 
             <div class="tabs">
@@ -414,15 +418,15 @@
       return;
     }
 
-    if (window.S.invitePreview && !window.S.user) {
-      app.innerHTML = window.renderInvitePreviewPage();
-      return;
-    }
+    if (window.S.invitePreview && !window.S.user && !window.S.inviteContinueRequested) {
+  app.innerHTML = window.renderInvitePreviewPage();
+  return;
+}
 
-    if (!window.S.user) {
-      app.innerHTML = window.renderAuthPage();
-      return;
-    }
+if (!window.S.user) {
+  app.innerHTML = window.renderAuthPage();
+  return;
+}
 
     if (!window.S.activeTeam) {
       app.innerHTML = window.renderTeamGatewayPage();
