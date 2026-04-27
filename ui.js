@@ -65,14 +65,15 @@
 
   window.showOnboarding = function () {
     window.OB.members = [];
-    window.$('onboarding').classList.remove('hidden');
-    window.$('app-wrap').classList.remove('active');
+    window.$('onboarding')?.classList.remove('hidden');
+    window.$('app-wrap')?.classList.remove('active');
     window.renderOnboarding();
     setTimeout(() => window.$('ob-name-input')?.focus(), 100);
   };
 
   window.renderOnboarding = function () {
     const list = window.$('ob-members');
+    if (!list) return;
 
     if (!window.OB.members.length) {
       list.innerHTML = '<p class="onboarding-empty">No team members added yet.</p>';
@@ -92,20 +93,23 @@
     }
 
     const n = window.OB.members.length;
-    window.$('ob-count').textContent = n ? `${n} member${n > 1 ? 's' : ''} added` : '';
-    window.$('ob-start-btn').disabled = n < 1;
+    const count = window.$('ob-count');
+    const startBtn = window.$('ob-start-btn');
+
+    if (count) count.textContent = n ? `${n} member${n > 1 ? 's' : ''} added` : '';
+    if (startBtn) startBtn.disabled = n < 1;
   };
 
   window.render = function () {
     window.renderHeader();
 
     if (window.S.admin) {
-      window.$('user-mode').classList.add('hidden');
-      window.$('admin-mode').classList.remove('hidden');
+      window.$('user-mode')?.classList.add('hidden');
+      window.$('admin-mode')?.classList.remove('hidden');
       window.renderAdmin();
     } else {
-      window.$('admin-mode').classList.add('hidden');
-      window.$('user-mode').classList.remove('hidden');
+      window.$('admin-mode')?.classList.add('hidden');
+      window.$('user-mode')?.classList.remove('hidden');
       window.renderCalendar();
       window.renderSidebar();
       window.renderEntries();
@@ -267,7 +271,7 @@
       const usedPTO = window.usedDays(m.id, 'pto');
       const usedParental = window.usedDays(m.id, 'parental');
 
-      return `<button class="summary-card ${window.S.selId === m.id ? 'active' : ''}" data-mid="${m.id}" style="--member-color:${m.color}">
+      return `<button type="button" class="summary-card ${window.S.selId === m.id ? 'active' : ''}" data-mid="${m.id}" style="--member-color:${m.color}">
         <div class="summary-card-head">
           <span class="summary-card-name">${window.esc(m.name)}</span>
           <span class="summary-card-dot" style="background:${m.color}"></span>
@@ -322,7 +326,7 @@
           <div class="entry-title">${window.TYPE_ICON[e.t]} ${window.TYPE_LABEL[e.t]}</div>
           <div class="entry-meta">${window.fmtS(e.s)} → ${window.fmtS(e.e)} · ${days} day${days > 1 ? 's' : ''}</div>
         </div>
-        <button class="btn btn-ghost entry-delete" data-eid="${e.id}" aria-label="Delete entry">✕</button>
+        <button type="button" class="btn btn-ghost entry-delete" data-eid="${e.id}" aria-label="Delete entry">✕</button>
       </div>`;
     }).join('');
   };
@@ -372,9 +376,7 @@
     }).join('');
 
     list.innerHTML = rows || '<p class="empty-note">No members yet.</p>';
-
-    const saveBtn = window.$('admin-save-btn');
-    if (saveBtn) saveBtn.disabled = !window.S.draftDirty;
+    window.refreshAdminSaveState();
   };
 
   window.refreshAdminSaveState = function () {
