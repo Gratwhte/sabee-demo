@@ -1,574 +1,385 @@
 (function () {
   'use strict';
 
-  window.obAdd = function () {
-    const inp = window.$('ob-name-input');
-    const err = window.$('ob-error');
-    if (!inp) return;
+  async function refreshActiveTeamState() {
+    await window.bootstrapAuthState();
 
-    const name = inp.value.trim();
+    if (window.S.activeTeam) {
+      try {
+        const [requests, memberships] = await Promise.all([
+          (window.S.membership?.role === 'owner' || window.S.membership?.role === 'admin')
+            ? window.loadPendingRequestsForMyTeam(window.S.activeTeam.id)
+            : Promise.resolve([]),
+          window.loadTeamMembers(window.S.activeTeam.id)
+        ]);
 
-    if (err) {
-      err.textContent = '';
-      err.classList.remove('visible');
-    }
-
-    if (!name) {
-      if (err) {
-        err.textContent = 'Please enter a name.';
-        err.classList.add('visible');
+        window.S.joinRequests = requests;
+        window.S.teams = memberships;
+      } catch (err) {
+        console.error(err);
+        window.setError(err.message || 'Failed to load team data.');
       }
-      inp.focus();
-      return;
+    } else {
+      window.S.joinRequests = [];
+      window.S.teams = [];
     }
+  }
 
-    if (window.OB.members.some(m => m.name.toLowerCase() === name.toLowerCase())) {
-      if (err) {
-        err.textContent = 'This name is already in the list.';
-        err.classList.add('visible');
-      }
-      inp.focus();
-      return;
-    }
-
-    window.OB.members.push({
-      name,
-      color: window.nextColor(window.OB.members)
-    });
-
-    inp.value = '';
-    window.renderOnboarding();
-    inp.focus();
-  };
-
-  window.obRemove = function (i) {
-    window.OB.members.splice(i, 1);
-    window.renderOnboarding();
-  };
-
-  window.obStart = async function () {
-    if (!window.OB.members.length) return;
-
+  async function refreshBrowseTeams(search = '') {
     try {
-      for (const m of window.OB.members) {
-        await window.createMember({
-          id: crypto.randomUUID(),
-          name: m.name,
-          color: m.color,
-          maxPTO: window.DEFAULT_MAX_PTO,
-          maxParental: 0
-        });
-      }
-
-      await window.loadFromSupabase();
-      window.S.selId = window.S.members.length ? window.S.members[0].id : null;
-
-      window.$('onboarding')?.classList.add('hidden');
-      window.$('app-wrap')?.classList.add('active');
-      window.bindApp();
-      window.render();
-    } catch (e) {
-      console.error('Onboarding failed', e);
-      alert('Failed to create team.');
-    }
-  };
-
-  window.confirmType = async function (type) {
-    if (!window.S.modalRange || !window.S.selId) return;
-
-    const m = window.member(window.S.selId);
-    if (!m) return;
-
-    const { s, e } = window.S.modalRange;
-
-    if (window.overlap(m.id, s, e)) return;
-    if (type === 'parental' && m.maxParental <= 0) return;
-
-    try {
-      await window.createDayOff({
-        id: crypto.randomUUID(),
-        mid: m.id,
-        s,
-        e,
-        t: type,
-        note: ''
-      });
-
-      await window.loadFromSupabase();
-      window.closeModal();
-      window.render();
+      window.S.browseTeams = await window.loadBrowseTeams(search);
     } catch (err) {
-      console.error('Failed to create day off entry', err);
-      alert('Failed to save day off entry.');
+      console.error(err);
+      window.setError(err.message || 'Failed to load teams.');
     }
-  };
+  }
 
-  window.onDayClick = function (ds) {
-    if (!window.S.selId) return;
+  async function handleInviteTokenIfPresent() {
+    const token = window.getInviteTokenFromUrl();
+    if (!token) return;
 
-    if (!window.S.pickStart) {
-      window.S.pickStart = ds;
-      window.S.hoverDate = ds;
-      window.renderCalendar();
+    if (!window.S.user) {
+      window.S.pendingInviteToken = token;
+      window.setMessage('Sign in first to accept this team invite.', 'info');
       return;
     }
 
-    const s = window.dmin(window.S.pickStart, ds);
-    const e = window.dmax(window.S.pickStart, ds);
+    const ok = window.confirm(
+      'In this version of Sabee, you can only belong to one team at a time. ' +
+      'Accepting this invite will replace your current team membership if you already belong to another team. Continue?'
+    );
 
-    window.S.pickStart = null;
-    window.S.hoverDate = null;
-    window.renderCalendar();
-    window.openModal(s, e);
-  };
-
-  window.navMonth = function (dir) {
-    let { y, m } = window.S.month;
-    m += dir;
-
-    if (m < 0) {
-      m = 11;
-      y -= 1;
-    }
-
-    if (m > 11) {
-      m = 0;
-      y += 1;
-    }
-
-    window.S.month = { y, m };
-    window.renderCalendar();
-  };
-
-  window.toggleAdmin = function () {
-    window.S.admin = !window.S.admin;
-
-    if (window.S.admin) {
-      window.S.draft = {
-        members: window.S.members.map(m => ({ ...m })),
-        removedIds: []
-      };
-      window.S.draftDirty = false;
-    }
-
-    window.render();
-  };
-
-  window.adminDiscard = function () {
-    window.S.draft = {
-      members: window.S.members.map(m => ({ ...m })),
-      removedIds: []
-    };
-    window.S.draftDirty = false;
-    window.renderAdmin();
-  };
-
-  window.adminAdd = function () {
-    if (!window.S.draft) return;
-
-    window.S.draft.members.push({
-      id: crypto.randomUUID(),
-      name: '',
-      color: window.nextColor(window.S.draft.members),
-      maxPTO: window.DEFAULT_MAX_PTO,
-      maxParental: 0
-    });
-
-    window.S.draftDirty = true;
-    window.closeAllPopovers();
-    window.renderAdmin();
-
-    const idx = window.S.draft.members.length - 1;
-    setTimeout(() => {
-      const inp = window.$('an' + idx);
-      if (inp) inp.focus();
-    }, 60);
-  };
-
-  window.adminRemove = function (i) {
-    if (!window.S.draft || !window.S.draft.members[i]) return;
-
-    const removed = window.S.draft.members[i];
-    if (removed && removed.id) {
-      window.S.draft.removedIds.push(removed.id);
-    }
-
-    window.S.draft.members.splice(i, 1);
-    window.S.draftDirty = true;
-    window.closeAllPopovers();
-    window.renderAdmin();
-  };
-
-  window.adminReset = async function () {
-    const ok = confirm('This will permanently delete all members and all days off for this workspace. Continue?');
     if (!ok) return;
 
     try {
-      await window.clearAllWorkspaceData();
-
-      window.S.members = [];
-      window.S.daysOff = [];
-      window.S.selId = null;
-      window.S.pickStart = null;
-      window.S.hoverDate = null;
-      window.S.admin = false;
-      window.S.draft = null;
-      window.S.draftDirty = false;
-      window.S.modalRange = null;
-
-      window.closeModal();
-      window.showOnboarding();
+      await window.acceptInvite(token);
+      window.removeInviteTokenFromUrl();
+      window.setMessage('Invite accepted. Your active team has been updated.', 'success');
+      await refreshActiveTeamState();
     } catch (err) {
-      console.error('Admin reset failed', err);
-      alert('Failed to reset workspace data.');
+      console.error(err);
+      window.setError(err.message || 'Could not accept invite.');
     }
-  };
+  }
 
-  window.adminSave = async function () {
-    if (!window.S.draft) return;
+  window.bindGlobal = function () {
+    document.addEventListener('click', async e => {
+      const target = e.target;
 
-    if (window.S.draft.members.some(m => !m.name.trim())) {
-      alert('All members must have a name.');
-      return;
-    }
-
-    const names = window.S.draft.members.map(m => m.name.trim().toLowerCase());
-    if (new Set(names).size !== names.length) {
-      alert('Member names must be unique.');
-      return;
-    }
-
-    try {
-      const currentById = new Map(window.S.members.map(m => [m.id, m]));
-      const draftById = new Map(window.S.draft.members.map(m => [m.id, m]));
-
-      for (const existing of window.S.members) {
-        if (!draftById.has(existing.id)) {
-          await window.deleteMember(existing.id);
-        }
-      }
-
-      for (const draftMember of window.S.draft.members) {
-        const existing = currentById.get(draftMember.id);
-
-        if (!existing) {
-          await window.createMember(draftMember);
-          continue;
-        }
-
-        const changed =
-          existing.name !== draftMember.name ||
-          existing.color !== draftMember.color ||
-          existing.maxPTO !== draftMember.maxPTO ||
-          existing.maxParental !== draftMember.maxParental;
-
-        if (changed) {
-          await window.updateMember(draftMember);
-        }
-      }
-
-      await window.loadFromSupabase();
-
-      if (!window.S.members.find(m => m.id === window.S.selId)) {
-        window.S.selId = window.S.members.length ? window.S.members[0].id : null;
-      }
-
-      window.S.draftDirty = false;
-      window.render();
-
-      const b = window.$('admin-save-btn');
-      if (b) {
-        const t = b.textContent;
-        b.textContent = '✓ Saved!';
-        b.disabled = true;
-        setTimeout(() => {
-          b.textContent = t;
-          b.disabled = false;
-        }, 1200);
-      }
-    } catch (err) {
-      console.error('Admin save failed', err);
-      alert('Failed to save team changes.');
-    }
-  };
-
-  window.trapFocus = function (e) {
-    if (e.key !== 'Tab' || !window.S.modalRange) return;
-
-    const nodes = Array.from(
-      document.querySelectorAll('#modal-overlay button, #modal-overlay [href], #modal-overlay input, #modal-overlay select, #modal-overlay textarea, #modal-overlay [tabindex]:not([tabindex="-1"])')
-    ).filter(el => !el.disabled);
-
-    if (!nodes.length) return;
-
-    const first = nodes[0];
-    const last = nodes[nodes.length - 1];
-
-    if (e.shiftKey && document.activeElement === first) {
-      e.preventDefault();
-      last.focus();
-    } else if (!e.shiftKey && document.activeElement === last) {
-      e.preventDefault();
-      first.focus();
-    }
-  };
-
-  window.bindOnboarding = function () {
-    const addBtn = window.$('ob-add-btn');
-    const input = window.$('ob-name-input');
-    const members = window.$('ob-members');
-    const startBtn = window.$('ob-start-btn');
-
-    if (addBtn) addBtn.addEventListener('click', window.obAdd);
-
-    if (input) {
-      input.addEventListener('keydown', e => {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          window.obAdd();
-        }
-      });
-    }
-
-    if (members) {
-      members.addEventListener('click', e => {
-        const btn = e.target.closest('.onboarding-member-remove');
-        if (btn) {
-          window.obRemove(parseInt(btn.dataset.i, 10));
-          return;
-        }
-
-        const dot = e.target.closest('.onboarding-member-color');
-        if (dot) {
-          e.stopPropagation();
-          window.togglePopover(dot.parentElement);
-          return;
-        }
-
-        const swatch = e.target.closest('.color-swatch[data-ctx="ob"]');
-        if (swatch) {
-          const i = parseInt(swatch.dataset.i, 10);
-          const clr = swatch.dataset.color;
-          if (!isNaN(i) && window.OB.members[i] && clr) {
-            window.OB.members[i].color = clr;
-            window.closeAllPopovers();
-            window.renderOnboarding();
-          }
-        }
-      });
-
-      members.addEventListener('keydown', e => {
-        const dot = e.target.closest('.onboarding-member-color');
-        if (dot && (e.key === 'Enter' || e.key === ' ')) {
-          e.preventDefault();
-          e.stopPropagation();
-          window.togglePopover(dot.parentElement);
-        }
-      });
-    }
-
-    if (startBtn) startBtn.addEventListener('click', window.obStart);
-  };
-
-  window.bindApp = function () {
-    if (window.appBound) return;
-    window.appBound = true;
-
-    const prevMonth = window.$('prev-month');
-    const nextMonth = window.$('next-month');
-    const adminToggle = window.$('admin-toggle');
-    const calendarDays = window.$('calendar-days');
-    const selectionCancel = window.$('selection-cancel');
-    const summaryList = window.$('summary-list');
-    const modalBtnPto = window.$('modal-btn-pto');
-    const modalBtnSick = window.$('modal-btn-sick');
-    const modalBtnParental = window.$('modal-btn-parental');
-    const modalCancel = window.$('modal-cancel');
-    const modalOverlay = window.$('modal-overlay');
-    const entriesList = window.$('entries-list');
-    const adminMembers = window.$('admin-members');
-    const adminAddBtn = window.$('admin-add-btn');
-    const adminSaveBtn = window.$('admin-save-btn');
-    const adminDiscardBtn = window.$('admin-discard-btn');
-    const adminResetBtn = window.$('admin-reset-btn');
-
-    if (prevMonth) prevMonth.addEventListener('click', () => window.navMonth(-1));
-    if (nextMonth) nextMonth.addEventListener('click', () => window.navMonth(1));
-    if (adminToggle) adminToggle.addEventListener('click', window.toggleAdmin);
-
-    if (calendarDays) {
-      calendarDays.addEventListener('click', e => {
-        const c = e.target.closest('.day-cell.cm');
-        if (c) window.onDayClick(c.dataset.d);
-      });
-
-      calendarDays.addEventListener('mouseover', e => {
-        const c = e.target.closest('.day-cell.cm');
-        if (!c) return;
-
-        if (window.S.pickStart && !window.S.modalRange) {
-          window.S.hoverDate = c.dataset.d;
-          window.updateRangeHighlight();
-        }
-
-        window.showTooltip(c, c.dataset.d);
-      });
-
-      calendarDays.addEventListener('mouseleave', () => {
-        window.S.hoverDate = null;
-        window.hideTooltip();
-        window.updateRangeHighlight();
-      });
-
-      calendarDays.addEventListener('keydown', e => {
-        const c = e.target.closest('.day-cell.cm');
-        if (c && (e.key === 'Enter' || e.key === ' ')) {
-          e.preventDefault();
-          window.onDayClick(c.dataset.d);
-        }
-      });
-    }
-
-    if (selectionCancel) {
-      selectionCancel.addEventListener('click', () => {
-        window.S.pickStart = null;
-        window.S.hoverDate = null;
-        window.renderCalendar();
-      });
-    }
-
-    document.addEventListener('keydown', e => {
-      if (window.S.modalRange) {
-        window.trapFocus(e);
+      if (target.id === 'tab-login') {
+        window.clearError();
+        window.clearMessage();
+        window.S.authMode = 'login';
+        window.render();
         return;
       }
 
-      if (e.key === 'Escape' && window.S.pickStart) {
-        window.S.pickStart = null;
-        window.S.hoverDate = null;
-        window.renderCalendar();
+      if (target.id === 'tab-register') {
+        window.clearError();
+        window.clearMessage();
+        window.S.authMode = 'register';
+        window.render();
+        return;
+      }
+
+      if (target.id === 'google-btn') {
+        try {
+          await window.signInWithGoogle();
+        } catch (err) {
+          console.error(err);
+          window.setError(err.message || 'Google sign-in failed.');
+          window.render();
+        }
+        return;
+      }
+
+      if (target.id === 'login-btn') {
+        const email = window.$('login-email')?.value?.trim();
+        const password = window.$('login-password')?.value || '';
+
+        try {
+          window.clearError();
+          window.clearMessage();
+          await window.signInWithEmail({ email, password });
+          await refreshActiveTeamState();
+          await handleInviteTokenIfPresent();
+          if (!window.S.activeTeam) {
+            await refreshBrowseTeams();
+          }
+          window.render();
+        } catch (err) {
+          console.error(err);
+          window.setError(err.message || 'Login failed.');
+          window.render();
+        }
+        return;
+      }
+
+      if (target.id === 'register-btn') {
+        const fullName = window.$('reg-full-name')?.value?.trim();
+        const email = window.$('reg-email')?.value?.trim();
+        const password = window.$('reg-password')?.value || '';
+
+        try {
+          window.clearError();
+          window.clearMessage();
+          await window.signUpWithEmail({ email, password, fullName });
+          window.setMessage(
+            'Registration submitted. If email confirmation is enabled, check your inbox. Otherwise you can log in now.',
+            'success'
+          );
+          window.S.authMode = 'login';
+          window.render();
+        } catch (err) {
+          console.error(err);
+          window.setError(err.message || 'Registration failed.');
+          window.render();
+        }
+        return;
+      }
+
+      if (target.id === 'sign-out-btn') {
+        try {
+          await window.signOut();
+          window.S.session = null;
+          window.S.user = null;
+          window.S.profile = null;
+          window.S.activeTeam = null;
+          window.S.membership = null;
+          window.S.teams = [];
+          window.S.joinRequests = [];
+          window.clearError();
+          window.setMessage('Signed out.', 'success');
+          window.render();
+        } catch (err) {
+          console.error(err);
+          window.setError(err.message || 'Sign out failed.');
+          window.render();
+        }
+        return;
+      }
+
+      if (target.id === 'tab-create-team') {
+        window.clearError();
+        window.clearMessage();
+        window.S.landingMode = 'create';
+        window.render();
+        return;
+      }
+
+      if (target.id === 'tab-join-team') {
+        window.clearError();
+        window.clearMessage();
+        window.S.landingMode = 'join';
+        await refreshBrowseTeams();
+        window.render();
+        return;
+      }
+
+      if (target.id === 'create-team-btn') {
+        const teamName = window.$('team-name')?.value?.trim();
+        const creatorDisplayName = window.$('creator-display-name')?.value?.trim();
+
+        try {
+          window.clearError();
+          window.clearMessage();
+          await window.createTeam({ teamName, creatorDisplayName });
+          await refreshActiveTeamState();
+          window.setMessage('Team created successfully.', 'success');
+          window.render();
+        } catch (err) {
+          console.error(err);
+          window.setError(err.message || 'Failed to create team.');
+          window.render();
+        }
+        return;
+      }
+
+      if (target.classList.contains('request-join-btn')) {
+        const teamId = target.dataset.teamId;
+        const teamName = target.dataset.teamName || 'this team';
+
+        const ok = window.confirm(
+          `You are requesting access to "${teamName}". ` +
+          `In this version of Sabee, if your request is later approved, your active team will switch and you will lose access to your previous team. Continue?`
+        );
+        if (!ok) return;
+
+        const message = window.prompt('Optional message to the admins of this team:', '') || '';
+
+        try {
+          window.clearError();
+          window.clearMessage();
+          await window.createJoinRequest({ teamId, message });
+          window.setMessage('Join request sent.', 'success');
+          window.render();
+        } catch (err) {
+          console.error(err);
+          window.setError(err.message || 'Could not send join request.');
+          window.render();
+        }
+        return;
+      }
+
+      if (target.classList.contains('approve-request-btn')) {
+        const requestId = target.dataset.requestId;
+        try {
+          await window.approveJoinRequest(requestId);
+          await refreshActiveTeamState();
+          window.setMessage('Request approved.', 'success');
+          window.render();
+        } catch (err) {
+          console.error(err);
+          window.setError(err.message || 'Could not approve request.');
+          window.render();
+        }
+        return;
+      }
+
+      if (target.classList.contains('reject-request-btn')) {
+        const requestId = target.dataset.requestId;
+        try {
+          await window.rejectJoinRequest(requestId);
+          await refreshActiveTeamState();
+          window.setMessage('Request rejected.', 'success');
+          window.render();
+        } catch (err) {
+          console.error(err);
+          window.setError(err.message || 'Could not reject request.');
+          window.render();
+        }
+        return;
+      }
+
+      if (target.id === 'invite-btn') {
+        try {
+          const token = await window.createInvite(window.S.activeTeam.id);
+          const url = `${window.SABEE_CONFIG.APP_URL}?invite=${token}`;
+
+          const area = window.$('invite-link-area');
+          if (area) {
+            area.innerHTML = `
+              <div class="alert alert-success">Invite created. It expires in 72 hours and can be used once.</div>
+              <div class="codebox">${window.esc(url)}</div>
+              <div class="row">
+                <button id="copy-invite-btn" class="btn btn-secondary" type="button">Copy link</button>
+              </div>
+            `;
+          }
+        } catch (err) {
+          console.error(err);
+          window.setError(err.message || 'Could not create invite.');
+          window.render();
+        }
+        return;
+      }
+
+      if (target.id === 'copy-invite-btn') {
+        const codebox = document.querySelector('#invite-link-area .codebox');
+        if (!codebox) return;
+
+        try {
+          await navigator.clipboard.writeText(codebox.textContent);
+          window.setMessage('Invite link copied.', 'success');
+          window.render();
+        } catch {
+          window.setError('Could not copy invite link.');
+          window.render();
+        }
+        return;
+      }
+
+      if (target.classList.contains('promote-admin-btn')) {
+        const membershipId = target.dataset.membershipId;
+        try {
+          await window.promoteToAdmin(membershipId);
+          await refreshActiveTeamState();
+          window.setMessage('Member promoted to admin.', 'success');
+          window.render();
+        } catch (err) {
+          console.error(err);
+          window.setError(err.message || 'Could not promote member.');
+          window.render();
+        }
+        return;
+      }
+
+      if (target.id === 'refresh-team-data-btn') {
+        try {
+          await refreshActiveTeamState();
+          window.setMessage('Team data refreshed.', 'success');
+          window.render();
+        } catch (err) {
+          console.error(err);
+          window.setError(err.message || 'Refresh failed.');
+          window.render();
+        }
       }
     });
 
-    if (summaryList) {
-      summaryList.addEventListener('click', e => {
-        const card = e.target.closest('.summary-card[data-mid]');
-        if (!card) return;
-
-        window.S.selId = card.dataset.mid;
-        window.S.pickStart = null;
-        window.S.hoverDate = null;
-        window.render();
-      });
-
-      summaryList.addEventListener('keydown', e => {
-        const card = e.target.closest('.summary-card[data-mid]');
-        if (card && (e.key === 'Enter' || e.key === ' ')) {
-          e.preventDefault();
-          window.S.selId = card.dataset.mid;
-          window.S.pickStart = null;
-          window.S.hoverDate = null;
-          window.render();
-        }
-      });
-    }
-
-    if (modalBtnPto) modalBtnPto.addEventListener('click', () => window.confirmType('pto'));
-    if (modalBtnSick) modalBtnSick.addEventListener('click', () => window.confirmType('sick'));
-    if (modalBtnParental) modalBtnParental.addEventListener('click', () => window.confirmType('parental'));
-    if (modalCancel) modalCancel.addEventListener('click', window.closeModal);
-
-    if (modalOverlay) {
-      modalOverlay.addEventListener('click', e => {
-        if (e.target === e.currentTarget) window.closeModal();
-      });
-    }
-
-    if (entriesList) {
-      entriesList.addEventListener('click', async e => {
-        const btn = e.target.closest('.entry-delete');
-        if (!btn) return;
-        if (!confirm('Delete this day off entry?')) return;
-
-        try {
-          await window.deleteDayOff(btn.dataset.eid);
-          await window.loadFromSupabase();
-          window.render();
-        } catch (err) {
-          console.error('Failed to delete day off entry', err);
-          alert('Failed to delete entry.');
-        }
-      });
-    }
-
-    if (adminMembers) {
-      adminMembers.addEventListener('click', e => {
-        const trigger = e.target.closest('.admin-color-trigger');
-        if (trigger) {
-          e.stopPropagation();
-          window.togglePopover(trigger.parentElement);
-          return;
-        }
-
-        const swatch = e.target.closest('.color-swatch[data-ctx="admin"]');
-        if (swatch) {
-          const i = parseInt(swatch.dataset.i, 10);
-          const clr = swatch.dataset.color;
-          if (!isNaN(i) && window.S.draft && window.S.draft.members[i] && clr) {
-            window.S.draft.members[i].color = clr;
-            window.S.draftDirty = true;
-            window.closeAllPopovers();
-            window.renderAdmin();
-          }
-          return;
-        }
-
-        const btn = e.target.closest('.admin-remove');
-        if (btn) window.adminRemove(parseInt(btn.dataset.i, 10));
-      });
-
-      adminMembers.addEventListener('input', e => {
-        const i = parseInt(e.target.dataset.i, 10);
-        if (isNaN(i) || !window.S.draft || !window.S.draft.members[i]) return;
-
-        if (e.target.classList.contains('admin-name-input')) {
-          window.S.draft.members[i].name = e.target.value;
-          window.S.draftDirty = true;
-          window.refreshAdminSaveState();
-          return;
-        }
-
-        if (e.target.classList.contains('admin-pto-input')) {
-          window.S.draft.members[i].maxPTO = Math.max(0, parseInt(e.target.value || '0', 10));
-          window.S.draftDirty = true;
-          window.refreshAdminSaveState();
-          return;
-        }
-
-        if (e.target.classList.contains('admin-parental-input')) {
-          window.S.draft.members[i].maxParental = Math.max(0, parseInt(e.target.value || '0', 10));
-          window.S.draftDirty = true;
-          window.refreshAdminSaveState();
-        }
-      });
-    }
-
-    if (adminAddBtn) adminAddBtn.addEventListener('click', window.adminAdd);
-    if (adminSaveBtn) adminSaveBtn.addEventListener('click', window.adminSave);
-    if (adminDiscardBtn) adminDiscardBtn.addEventListener('click', window.adminDiscard);
-    if (adminResetBtn) adminResetBtn.addEventListener('click', window.adminReset);
+    document.addEventListener('input', async e => {
+      const target = e.target;
+      if (target.id === 'team-search') {
+        await refreshBrowseTeams(target.value || '');
+        const box = window.$('browse-team-results');
+        if (box) box.innerHTML = window.renderBrowseTeamResults();
+      }
+    });
   };
 
   window.init = async function () {
-    window.bindOnboarding();
+    window.S.loading = true;
+    window.clearError();
+    window.clearMessage();
+    window.render();
 
-    if (await window.load()) {
-      window.$('onboarding')?.classList.add('hidden');
-      window.$('app-wrap')?.classList.add('active');
-      window.bindApp();
+    try {
+      await window.bootstrapAuthState();
+      await handleInviteTokenIfPresent();
+
+      if (!window.S.activeTeam && window.S.user) {
+        await refreshBrowseTeams();
+      }
+
+      if (window.S.activeTeam) {
+        await refreshActiveTeamState();
+      }
+
+      window.sb.auth.onAuthStateChange(async (_event, session) => {
+        window.S.session = session;
+        window.S.user = session?.user || null;
+
+        try {
+          await window.bootstrapAuthState();
+          await handleInviteTokenIfPresent();
+
+          if (!window.S.activeTeam && window.S.user) {
+            await refreshBrowseTeams();
+          }
+
+          if (window.S.activeTeam) {
+            await refreshActiveTeamState();
+          }
+
+          window.S.loading = false;
+          window.render();
+        } catch (err) {
+          console.error(err);
+          window.S.loading = false;
+          window.setError(err.message || 'Auth state refresh failed.');
+          window.render();
+        }
+      });
+
+      window.bindGlobal();
+
+      window.S.loading = false;
       window.render();
-    } else {
-      window.showOnboarding();
+    } catch (err) {
+      console.error(err);
+      window.S.loading = false;
+      window.setError(err.message || 'App initialization failed.');
+      window.render();
     }
   };
 
