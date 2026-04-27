@@ -323,7 +323,8 @@
       activeInvite && activeInvite.is_active
         ? `
           <div class="alert alert-success">
-            Active invite available. Expires in ${window.esc(window.formatRemaining(activeInvite.expires_at))}.
+            Active invite available. Expires in
+            <span id="active-invite-countdown">${window.esc(window.formatRemaining(activeInvite.expires_at))}</span>.
           </div>
           <div class="codebox" id="active-invite-link">${window.esc(`${window.SABEE_CONFIG.APP_URL}?invite=${activeInvite.token}`)}</div>
           <div class="row">
