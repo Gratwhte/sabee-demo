@@ -677,8 +677,11 @@
       if (!cell || !window.S.pickStart || window.S.modalRange) return;
       if (!window.canEditSelectedMember()) return;
 
-      window.S.hoverDate = cell.dataset.d;
-      window.render();
+      const ds = cell.dataset.d;
+      if (window.S.hoverDate === ds) return;
+
+      window.S.hoverDate = ds;
+      window.updateCalendarRangeHighlight();
     });
 
     document.addEventListener('mouseout', e => {
@@ -693,7 +696,7 @@
 
       if (window.S.pickStart) {
         window.S.hoverDate = null;
-        window.render();
+        window.updateCalendarRangeHighlight();
       }
     });
   };
