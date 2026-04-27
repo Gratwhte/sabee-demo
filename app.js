@@ -4,32 +4,27 @@
   let inviteCountdownTimer = null;
 
   function startInviteCountdown() {
-    if (inviteCountdownTimer) {
-      clearInterval(inviteCountdownTimer);
-      inviteCountdownTimer = null;
+  if (inviteCountdownTimer) {
+    clearInterval(inviteCountdownTimer);
+    inviteCountdownTimer = null;
+  }
+
+  inviteCountdownTimer = setInterval(() => {
+    if (!window.S.activeInvite || !window.S.activeInvite.is_active) return;
+
+    const countdownEl = window.$('active-invite-countdown');
+    if (countdownEl) {
+      countdownEl.textContent = window.formatRemaining(window.S.activeInvite.expires_at);
     }
 
-    inviteCountdownTimer = setInterval(() => {
-      if (!window.S.activeInvite && !window.S.invitePreview) return;
-
-      const inviteArea = window.$('invite-link-area');
-      if (inviteArea && window.S.activeInvite && window.S.activeInvite.is_active) {
-        inviteArea.innerHTML = `
-          <div class="alert alert-success">
-            Active invite available. Expires in ${window.esc(window.formatRemaining(window.S.activeInvite.expires_at))}.
-          </div>
-          <div class="codebox">${window.esc(`${window.SABEE_CONFIG.APP_URL}?invite=${window.S.activeInvite.token}`)}</div>
-        `;
+    if (window.S.invitePreview && !window.S.user) {
+      const previewCountdown = document.querySelector('#invite-preview-countdown');
+      if (previewCountdown && window.S.invitePreview?.expires_at) {
+        previewCountdown.textContent = window.formatRemaining(window.S.invitePreview.expires_at);
       }
-
-      const alerts = document.querySelectorAll('.alert');
-      alerts.forEach(() => {});
-
-      if (window.S.invitePreview && !window.S.user) {
-        window.render();
-      }
-    }, 1000);
-  }
+    }
+  }, 1000);
+}
 
   async function refreshActiveTeamState() {
     await window.bootstrapAuthState();
