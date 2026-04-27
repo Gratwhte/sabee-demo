@@ -297,6 +297,10 @@
       throw membersError;
     }
 
+    try {
+      localStorage.removeItem(window.STORAGE_KEY);
+    } catch (_) {}
+
     window.setSyncStatus('saved');
   };
 })();
