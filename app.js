@@ -53,7 +53,8 @@
     window.S.activeInvite = activeInvite;
 
     if (!window.S.rosterMembers.find(m => m.id === window.S.selectedMemberId)) {
-      window.S.selectedMemberId = window.S.rosterMembers.length ? window.S.rosterMembers[0].id : null;
+      const mine = window.currentUserRosterMember();
+      window.S.selectedMemberId = mine?.id || (window.S.rosterMembers.length ? window.S.rosterMembers[0].id : null);
     }
   }
 
@@ -138,8 +139,8 @@
   }
 
   function onDayClick(ds) {
-    if (!window.isAdmin()) return;
     if (!window.S.selectedMemberId) return;
+    if (!window.canEditSelectedMember()) return;
 
     if (!window.S.pickStart) {
       window.S.pickStart = ds;
@@ -159,6 +160,7 @@
 
   async function confirmDayOffType(type) {
     if (!window.S.modalRange || !window.S.selectedMemberId || !window.S.activeTeam) return;
+    if (!window.canEditSelectedMember()) return;
 
     const m = window.rosterMember(window.S.selectedMemberId);
     if (!m) return;
@@ -258,7 +260,8 @@
 
   window.bindGlobal = function () {
     document.addEventListener('click', async e => {
-      const target = e.target;
+      const target = e.target instanceof Element ? e.target : null;
+      if (!target) return;
 
       if (target.id === 'continue-invite-btn') {
         window.clearError();
@@ -582,6 +585,7 @@
 
       if (target.classList.contains('entry-delete-btn')) {
         const entryId = target.dataset.entryId;
+        if (!window.canEditSelectedMember()) return;
         if (!window.confirm('Delete this day off entry?')) return;
 
         try {
@@ -655,7 +659,8 @@
     });
 
     document.addEventListener('input', async e => {
-      const target = e.target;
+      const target = e.target instanceof Element ? e.target : null;
+      if (!target) return;
 
       if (target.id === 'team-search') {
         await refreshBrowseTeams(target.value || '');
@@ -665,34 +670,32 @@
     });
 
     document.addEventListener('mouseover', e => {
-  const target = e.target instanceof Element ? e.target : null;
-  if (!target) return;
+      const target = e.target instanceof Element ? e.target : null;
+      if (!target) return;
 
-  const cell = target.closest('.day-cell.cm');
-  if (!cell || !window.S.pickStart || window.S.modalRange) return;
+      const cell = target.closest('.day-cell.cm');
+      if (!cell || !window.S.pickStart || window.S.modalRange) return;
+      if (!window.canEditSelectedMember()) return;
 
-  window.S.hoverDate = cell.dataset.d;
-  window.render();
-});
+      window.S.hoverDate = cell.dataset.d;
+      window.render();
+    });
 
-document.addEventListener('mouseout', e => {
-  const target = e.target instanceof Element ? e.target : null;
-  if (!target) return;
+    document.addEventListener('mouseout', e => {
+      const target = e.target instanceof Element ? e.target : null;
+      if (!target) return;
 
-  const grid = target.closest('#calendar-days');
-  if (!grid) return;
+      const grid = target.closest('#calendar-days');
+      if (!grid) return;
 
-  const related = e.relatedTarget instanceof Element ? e.relatedTarget : null;
+      const related = e.relatedTarget instanceof Element ? e.relatedTarget : null;
+      if (related && grid.contains(related)) return;
 
-  if (related && grid.contains(related)) {
-    return;
-  }
-
-  if (window.S.pickStart) {
-    window.S.hoverDate = null;
-    window.render();
-  }
-});
+      if (window.S.pickStart) {
+        window.S.hoverDate = null;
+        window.render();
+      }
+    });
   };
 
   window.init = async function () {
