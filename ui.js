@@ -71,8 +71,8 @@
                   </div>
 
                   <div class="alert alert-info">
-                    This invite expires in ${window.esc(window.formatRemaining(preview.expires_at))}.
-                  </div>
+  This invite expires in <span id="invite-preview-countdown">${window.esc(window.formatRemaining(preview.expires_at))}</span>.
+</div>
 
                   <div class="alert alert-warn">
                     In this version of Sabee, each user can belong to only one team at a time.
