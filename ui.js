@@ -6,12 +6,7 @@
       return `<div class="alert alert-error">${window.esc(window.S.error)}</div>`;
     }
     if (window.S.message) {
-      const map = {
-        info: 'alert-info',
-        success: 'alert-success',
-        warn: 'alert-warn',
-        error: 'alert-error'
-      };
+      const map = { info: 'alert-info', success: 'alert-success', warn: 'alert-warn', error: 'alert-error' };
       return `<div class="alert ${map[window.S.message.type] || 'alert-info'}">${window.esc(window.S.message.text)}</div>`;
     }
     return '';
@@ -19,8 +14,14 @@
 
   window.renderTopbar = function () {
     const profile = window.S.profile;
-    const isAdmin = window.isAdmin();
-    const isCalendarView = window.S.appView === 'calendar';
+    const canAdmin = window.isAdmin();
+
+    let adminButton = '';
+    if (canAdmin && window.S.activeTeam) {
+      const btnText = window.S.appView === 'calendar' ? 'Admin' : 'Calendar';
+      const btnId = window.S.appView === 'calendar' ? 'btn-admin' : 'btn-calendar';
+      adminButton = `<button class="btn btn-secondary" id="${btnId}" type="button">${btnText}</button>`;
+    }
 
     return `
       <div class="topbar">
@@ -34,13 +35,7 @@
 
           <div class="topbar-right">
             ${window.S.activeTeam ? `<span class="meta"><strong>${window.esc(window.S.activeTeam.name)}</strong></span>` : ''}
-
-            ${isAdmin && window.S.activeTeam ? `
-              <button class="btn btn-secondary" id="topnav-view-toggle" type="button">
-                ${isCalendarView ? 'Admin view' : 'Calendar view'}
-              </button>
-            ` : ''}
-
+            ${adminButton}
             ${profile ? `<span class="meta">${window.esc(profile.full_name || profile.email || 'Signed in')}</span>` : ''}
             ${profile ? `<button class="btn btn-secondary" id="sign-out-btn" type="button">Sign out</button>` : ''}
           </div>
@@ -51,7 +46,6 @@
 
   window.renderInvitePreviewPage = function () {
     const preview = window.S.invitePreview;
-
     return `
       <div class="page">
         ${window.renderTopbar()}
@@ -62,34 +56,7 @@
               <p>You were invited to join a Sabee team.</p>
             </div>
             ${window.renderMessageBlock()}
-            ${
-              !preview ? `
-                <div class="alert alert-error">This invite could not be loaded.</div>
-              ` : !preview.is_valid ? `
-                <div class="alert alert-error">This invite has expired or is no longer valid.</div>
-                <div class="field">
-                  <label>Team</label>
-                  <div class="input">${window.esc(preview.team_name || 'Unknown team')}</div>
-                </div>
-              ` : `
-                <div class="stack">
-                  <div class="field">
-                    <label>Invited team</label>
-                    <div class="input">${window.esc(preview.team_name)}</div>
-                  </div>
-                  <div class="alert alert-info">
-                    This invite expires in <span id="invite-preview-countdown">${window.esc(window.formatRemaining(preview.expires_at))}</span>.
-                  </div>
-                  <div class="alert alert-warn">
-                    In this version of Sabee, each user can belong to only one team at a time.
-                    If you continue with this invitation and join the team, your current active team access will be replaced.
-                  </div>
-                  <div class="row">
-                    <button id="continue-invite-btn" class="btn btn-primary" type="button">Continue to join this team</button>
-                  </div>
-                </div>
-              `
-            }
+            ${!preview ? `<div class="alert alert-error">This invite could not be loaded.</div>` : !preview.is_valid ? `<div class="alert alert-error">This invite has expired or is no longer valid.</div><div class="field"><label>Team</label><div class="input">${window.esc(preview.team_name || 'Unknown team')}</div></div>` : `<div class="stack"><div class="field"><label>Invited team</label><div class="input">${window.esc(preview.team_name)}</div></div><div class="alert alert-info">This invite expires in <span id="invite-preview-countdown">${window.esc(window.formatRemaining(preview.expires_at))}</span>.</div><div class="alert alert-warn">In this version of Sabee, each user can belong to only one team at a time. If you continue with this invitation and join the team, your current active team access will be replaced.</div><div class="row"><button id="continue-invite-btn" class="btn btn-primary" type="button">Continue to join this team</button></div></div>`}
           </div>
         </div>
       </div>
@@ -98,7 +65,6 @@
 
   window.renderAuthPage = function () {
     const mode = window.S.authMode;
-
     return `
       <div class="page">
         ${window.renderTopbar()}
@@ -115,14 +81,8 @@
             ${window.renderMessageBlock()}
             <div class="stack">
               ${mode === 'register' ? `<div class="field"><label for="reg-full-name">Full name</label><input id="reg-full-name" class="input" type="text" placeholder="Your name"></div>` : ''}
-              <div class="field">
-                <label for="${mode === 'register' ? 'reg-email' : 'login-email'}">Email</label>
-                <input id="${mode === 'register' ? 'reg-email' : 'login-email'}" class="input" type="email" placeholder="you@example.com">
-              </div>
-              <div class="field">
-                <label for="${mode === 'register' ? 'reg-password' : 'login-password'}">Password</label>
-                <input id="${mode === 'register' ? 'reg-password' : 'login-password'}" class="input" type="password" placeholder="••••••••">
-              </div>
+              <div class="field"><label for="${mode === 'register' ? 'reg-email' : 'login-email'}">Email</label><input id="${mode === 'register' ? 'reg-email' : 'login-email'}" class="input" type="email" placeholder="you@example.com"></div>
+              <div class="field"><label for="${mode === 'register' ? 'reg-password' : 'login-password'}">Password</label><input id="${mode === 'register' ? 'reg-password' : 'login-password'}" class="input" type="password" placeholder="••••••••"></div>
               ${mode === 'register' ? `<div class="legal-box"><strong>Demo data handling notice</strong><br><br>Sabee is currently a demo application. If you create an account, we store your email address, profile information you provide, your team membership, and team-related activity inside Supabase. Google sign-in may also provide us with your name and avatar if available.<br><br>This demo is not intended for sensitive personal, financial, health, or legally confidential data. Please do not upload anything private that you would not want visible to demo administrators or testers. Features, storage rules, and data retention may change while the demo evolves.</div>` : ''}
               <div class="row">
                 <button id="${mode === 'register' ? 'register-btn' : 'login-btn'}" class="btn btn-primary" type="button">${mode === 'register' ? 'Create account' : 'Log in'}</button>
@@ -181,12 +141,7 @@
 
   window.renderBrowseTeamResults = function () {
     if (!window.S.browseTeams.length) return `<div class="empty">No teams found.</div>`;
-    return window.S.browseTeams.map(team => `
-      <div class="team-card">
-        <div><h4>${window.esc(team.name)}</h4><p>Team slug: ${window.esc(team.slug)}</p></div>
-        <div class="inline-actions"><button class="btn btn-primary request-join-btn" data-team-id="${team.id}" data-team-name="${window.esc(team.name)}" type="button">Request access</button></div>
-      </div>
-    `).join('');
+    return window.S.browseTeams.map(team => `<div class="team-card"><div><h4>${window.esc(team.name)}</h4><p>Team slug: ${window.esc(team.slug)}</p></div><div class="inline-actions"><button class="btn btn-primary request-join-btn" data-team-id="${team.id}" data-team-name="${window.esc(team.name)}" type="button">Request access</button></div></div>`).join('');
   };
 
   window.renderSummaryList = function () {
@@ -195,22 +150,7 @@
       const usedPTO = window.usedDays(m.id, 'pto');
       const usedParental = window.usedDays(m.id, 'parental');
       const linkedSelf = window.S.user && m.userId === window.S.user.id;
-      return `
-        <button type="button" class="summary-card ${window.S.selectedMemberId === m.id ? 'active' : ''}" data-mid="${m.id}" style="--member-color:${m.color}">
-          <div class="summary-card-head">
-            <span class="summary-card-name">${window.esc(m.name)} ${linkedSelf ? '<span class="small muted">(you)</span>' : ''}</span>
-            <span class="summary-card-dot" style="background:${m.color}"></span>
-          </div>
-          <div class="summary-meter-block">
-            <div class="summary-label-row"><span>PTO</span><span>${usedPTO}/${m.maxPTO}</span></div>
-            <div class="meter"><span class="meter-fill ${window.statusCls(usedPTO, m.maxPTO)}" style="width:${Math.min(100, m.maxPTO ? (usedPTO / m.maxPTO) * 100 : 0)}%"></span></div>
-          </div>
-          <div class="summary-meter-block">
-            <div class="summary-label-row"><span>Parental</span><span>${usedParental}/${m.maxParental}</span></div>
-            <div class="meter"><span class="meter-fill ${window.statusCls(usedParental, m.maxParental)}" style="width:${Math.min(100, m.maxParental ? (usedParental / m.maxParental) * 100 : 0)}%"></span></div>
-          </div>
-        </button>
-      `;
+      return `<button type="button" class="summary-card ${window.S.selectedMemberId === m.id ? 'active' : ''}" data-mid="${m.id}" style="--member-color:${m.color}"><div class="summary-card-head"><span class="summary-card-name">${window.esc(m.name)} ${linkedSelf ? '<span class="small muted">(you)</span>' : ''}</span><span class="summary-card-dot" style="background:${m.color}"></span></div><div class="summary-meter-block"><div class="summary-label-row"><span>PTO</span><span>${usedPTO}/${m.maxPTO}</span></div><div class="meter"><span class="meter-fill ${window.statusCls(usedPTO, m.maxPTO)}" style="width:${Math.min(100, m.maxPTO ? (usedPTO / m.maxPTO) * 100 : 0)}%"></span></div></div><div class="summary-meter-block"><div class="summary-label-row"><span>Parental</span><span>${usedParental}/${m.maxParental}</span></div><div class="meter"><span class="meter-fill ${window.statusCls(usedParental, m.maxParental)}" style="width:${Math.min(100, m.maxParental ? (usedParental / m.maxParental) * 100 : 0)}%"></span></div></div></button>`;
     }).join('');
   };
 
@@ -222,15 +162,7 @@
     const canEdit = window.canEditSelectedMember();
     return entries.map(e => {
       const days = window.dspan(e.s, e.e);
-      return `
-        <div class="entry-card">
-          <div>
-            <div class="entry-title">${window.TYPE_ICON[e.t]} ${window.TYPE_LABEL[e.t]}</div>
-            <div class="entry-meta">${window.fmtS(e.s)} → ${window.fmtS(e.e)} · ${days} day${days > 1 ? 's' : ''}</div>
-          </div>
-          ${canEdit ? `<button type="button" class="btn btn-ghost entry-delete-btn" data-entry-id="${e.id}">Delete</button>` : ''}
-        </div>
-      `;
+      return `<div class="entry-card"><div><div class="entry-title">${window.TYPE_ICON[e.t]} ${window.TYPE_LABEL[e.t]}</div><div class="entry-meta">${window.fmtS(e.s)} → ${window.fmtS(e.e)} · ${days} day${days > 1 ? 's' : ''}</div></div>${canEdit ? `<button type="button" class="btn btn-ghost entry-delete-btn" data-entry-id="${e.id}">Delete</button>` : ''}</div>`;
     }).join('');
   };
 
@@ -317,19 +249,7 @@
 
   window.renderPendingRequests = function () {
     if (!window.S.joinRequests.length) return `<div class="empty">No pending requests.</div>`;
-    return window.S.joinRequests.map(req => `
-      <div class="list-item">
-        <div>
-          <div><strong>${window.esc(req.requester?.full_name || req.requester?.email || 'Unknown user')}</strong></div>
-          <div class="small muted">${window.esc(req.requester?.email || '')}</div>
-          ${req.message ? `<div class="small muted">${window.esc(req.message)}</div>` : ''}
-        </div>
-        <div class="inline-actions">
-          <button class="btn btn-primary approve-request-btn" data-request-id="${req.id}" type="button">Approve</button>
-          <button class="btn btn-secondary reject-request-btn" data-request-id="${req.id}" type="button">Reject</button>
-        </div>
-      </div>
-    `).join('');
+    return window.S.joinRequests.map(req => `<div class="list-item"><div><div><strong>${window.esc(req.requester?.full_name || req.requester?.email || 'Unknown user')}</strong></div><div class="small muted">${window.esc(req.requester?.email || '')}</div>${req.message ? `<div class="small muted">${window.esc(req.message)}</div>` : ''}</div><div class="inline-actions"><button class="btn btn-primary approve-request-btn" data-request-id="${req.id}" type="button">Approve</button><button class="btn btn-secondary reject-request-btn" data-request-id="${req.id}" type="button">Reject</button></div></div>`).join('');
   };
 
   window.renderMemberships = function () {
@@ -337,35 +257,13 @@
     return window.S.memberships.map(m => {
       const badgeClass = m.role === 'owner' ? 'badge-owner' : m.role === 'admin' ? 'badge-admin' : 'badge-member';
       const canPromote = window.isOwner() && m.role === 'member';
-      return `
-        <div class="list-item">
-          <div><div><strong>${window.esc(m.profile?.full_name || m.profile?.email || 'Unknown user')}</strong></div><div class="small muted">${window.esc(m.profile?.email || '')}</div></div>
-          <div class="inline-actions">
-            <span class="badge ${badgeClass}">${window.esc(m.role)}</span>
-            ${canPromote ? `<button class="btn btn-secondary promote-admin-btn" data-membership-id="${m.id}" type="button">Make admin</button>` : ''}
-          </div>
-        </div>
-      `;
+      return `<div class="list-item"><div><div><strong>${window.esc(m.profile?.full_name || m.profile?.email || 'Unknown user')}</strong></div><div class="small muted">${window.esc(m.profile?.email || '')}</div></div><div class="inline-actions"><span class="badge ${badgeClass}">${window.esc(m.role)}</span>${canPromote ? `<button class="btn btn-secondary promote-admin-btn" data-membership-id="${m.id}" type="button">Make admin</button>` : ''}</div></div>`;
     }).join('');
   };
 
   window.renderRosterManagementList = function () {
     if (!window.S.rosterMembers.length) return '<div class="empty">No roster members yet.</div>';
-    return window.S.rosterMembers.map(m => `
-      <div class="list-item">
-        <div style="flex:1">
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
-            <span class="summary-card-dot" style="background:${m.color}"></span>
-            <strong>${window.esc(m.name)}</strong>
-          </div>
-          <div class="small muted">PTO ${m.maxPTO} · Parental ${m.maxParental}${m.userId ? ' · linked user' : ' · placeholder'}</div>
-        </div>
-        <div class="inline-actions">
-          <button class="btn btn-secondary edit-roster-member-btn" data-mid="${m.id}" type="button">Edit</button>
-          <button class="btn btn-danger delete-roster-member-btn" data-mid="${m.id}" type="button">Delete</button>
-        </div>
-      </div>
-    `).join('');
+    return window.S.rosterMembers.map(m => `<div class="list-item"><div style="flex:1"><div style="display:flex;align-items:center;gap:10px;margin-bottom:6px"><span class="summary-card-dot" style="background:${m.color}"></span><strong>${window.esc(m.name)}</strong></div><div class="small muted">PTO ${m.maxPTO} · Parental ${m.maxParental}${m.userId ? ' · linked user' : ' · placeholder'}</div></div><div class="inline-actions"><button class="btn btn-secondary edit-roster-member-btn" data-mid="${m.id}" type="button">Edit</button><button class="btn btn-danger delete-roster-member-btn" data-mid="${m.id}" type="button">Delete</button></div></div>`).join('');
   };
 
   window.renderAdminView = function () {
@@ -375,17 +273,7 @@
         <section class="admin-section">
           <h3 class="section-title">Invite link</h3>
           <div id="invite-link-area" class="stack">
-            ${activeInvite && activeInvite.is_active ? `
-              <div class="alert alert-success">Active invite available. Expires in <span id="active-invite-countdown">${window.esc(window.formatRemaining(activeInvite.expires_at))}</span>.</div>
-              <div class="codebox" id="active-invite-link">${window.esc(`${window.SABEE_CONFIG.APP_URL}?invite=${activeInvite.token}`)}</div>
-              <div class="row">
-                <button id="invite-btn" class="btn btn-primary" type="button">Show / refresh invite</button>
-                <button id="copy-invite-btn" class="btn btn-secondary" type="button">Copy link</button>
-              </div>
-            ` : `
-              <div class="empty">No active invite yet.</div>
-              <div class="row"><button id="invite-btn" class="btn btn-primary" type="button">Create invite</button></div>
-            `}
+            ${activeInvite && activeInvite.is_active ? `<div class="alert alert-success">Active invite available. Expires in <span id="active-invite-countdown">${window.esc(window.formatRemaining(activeInvite.expires_at))}</span>.</div><div class="codebox" id="active-invite-link">${window.esc(`${window.SABEE_CONFIG.APP_URL}?invite=${activeInvite.token}`)}</div><div class="row"><button id="invite-btn" class="btn btn-primary" type="button">Show / refresh invite</button><button id="copy-invite-btn" class="btn btn-secondary" type="button">Copy link</button></div>` : `<div class="empty">No active invite yet.</div><div class="row"><button id="invite-btn" class="btn btn-primary" type="button">Create invite</button></div>`}
           </div>
         </section>
         <section class="admin-section">
@@ -423,26 +311,7 @@
   window.renderEditMemberModal = function () {
     const m = window.S.editingMember;
     if (!m) return '';
-    return `
-      <div id="edit-member-overlay" class="modal-overlay">
-        <div class="modal-content">
-          <h3 class="modal-title">Edit roster member</h3>
-          <p class="modal-subtitle">Update this team member's display and allowance values.</p>
-          <div class="stack">
-            <div class="field"><label for="edit-member-name">Name</label><input id="edit-member-name" class="input" type="text" value="${window.esc(m.name)}"></div>
-            <div class="field"><label for="edit-member-color">Color</label><input id="edit-member-color" class="input" type="color" value="${window.esc(m.color)}"></div>
-            <div class="grid-2">
-              <div class="field"><label for="edit-member-pto">PTO allowance</label><input id="edit-member-pto" class="input" type="number" min="0" value="${m.maxPTO}"></div>
-              <div class="field"><label for="edit-member-parental">Parental allowance</label><input id="edit-member-parental" class="input" type="number" min="0" value="${m.maxParental}"></div>
-            </div>
-            <div class="row">
-              <button id="save-edit-member-btn" class="btn btn-primary" type="button">Save changes</button>
-              <button id="cancel-edit-member-btn" class="btn btn-secondary" type="button">Cancel</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
+    return `<div id="edit-member-overlay" class="modal-overlay"><div class="modal-content"><h3 class="modal-title">Edit roster member</h3><p class="modal-subtitle">Update this team member's display and allowance values.</p><div class="stack"><div class="field"><label for="edit-member-name">Name</label><input id="edit-member-name" class="input" type="text" value="${window.esc(m.name)}"></div><div class="field"><label for="edit-member-color">Color</label><input id="edit-member-color" class="input" type="color" value="${window.esc(m.color)}"></div><div class="grid-2"><div class="field"><label for="edit-member-pto">PTO allowance</label><input id="edit-member-pto" class="input" type="number" min="0" value="${m.maxPTO}"></div><div class="field"><label for="edit-member-parental">Parental allowance</label><input id="edit-member-parental" class="input" type="number" min="0" value="${m.maxParental}"></div></div><div class="row"><button id="save-edit-member-btn" class="btn btn-primary" type="button">Save changes</button><button id="cancel-edit-member-btn" class="btn btn-secondary" type="button">Cancel</button></div></div></div></div>`;
   };
 
   window.renderDayOffModal = function () {
@@ -454,41 +323,11 @@
     const usedPTO = window.usedDays(m.id, 'pto');
     const usedParental = window.usedDays(m.id, 'parental');
     const hasOverlap = window.overlap(m.id, s, e);
-    return `
-      <div id="modal-overlay" class="modal-overlay">
-        <div class="modal-content">
-          <h3 class="modal-title">Log Days Off</h3>
-          <p class="modal-subtitle"><strong>${window.esc(m.name)}</strong> · ${window.esc(window.fmtS(s))} → ${window.esc(window.fmtS(e))}</p>
-          ${hasOverlap ? `<div class="alert alert-error">This range overlaps with an existing day-off entry.</div>` : ''}
-          <div class="modal-options">
-            <button id="modal-btn-pto" class="modal-option" type="button" ${hasOverlap ? 'disabled' : ''}>
-              <div><span class="option-label">🏖️ Paid Time Off</span><span class="option-detail">${rangeDays} day${rangeDays > 1 ? 's' : ''} · used ${usedPTO}/${m.maxPTO}</span></div>
-            </button>
-            <button id="modal-btn-sick" class="modal-option" type="button" ${hasOverlap ? 'disabled' : ''}>
-              <div><span class="option-label">🤒 Sick Leave</span><span class="option-detail">${rangeDays} day${rangeDays > 1 ? 's' : ''}</span></div>
-            </button>
-            <button id="modal-btn-parental" class="modal-option" type="button" ${(hasOverlap || m.maxParental <= 0) ? 'disabled' : ''}>
-              <div><span class="option-label">👶 Parental Leave</span><span class="option-detail">${rangeDays} day${rangeDays > 1 ? 's' : ''} · used ${usedParental}/${m.maxParental}</span></div>
-            </button>
-          </div>
-          <button id="modal-cancel" class="btn btn-secondary" type="button">Cancel</button>
-        </div>
-      </div>
-    `;
+    return `<div id="modal-overlay" class="modal-overlay"><div class="modal-content"><h3 class="modal-title">Log Days Off</h3><p class="modal-subtitle"><strong>${window.esc(m.name)}</strong> · ${window.esc(window.fmtS(s))} → ${window.esc(window.fmtS(e))}</p>${hasOverlap ? `<div class="alert alert-error">This range overlaps with an existing day-off entry.</div>` : ''}<div class="modal-options"><button id="modal-btn-pto" class="modal-option" type="button" ${hasOverlap ? 'disabled' : ''}><div><span class="option-label">🏖️ Paid Time Off</span><span class="option-detail">${rangeDays} day${rangeDays > 1 ? 's' : ''} · used ${usedPTO}/${m.maxPTO}</span></div></button><button id="modal-btn-sick" class="modal-option" type="button" ${hasOverlap ? 'disabled' : ''}><div><span class="option-label">🤒 Sick Leave</span><span class="option-detail">${rangeDays} day${rangeDays > 1 ? 's' : ''}</span></div></button><button id="modal-btn-parental" class="modal-option" type="button" ${(hasOverlap || m.maxParental <= 0) ? 'disabled' : ''}><div><span class="option-label">👶 Parental Leave</span><span class="option-detail">${rangeDays} day${rangeDays > 1 ? 's' : ''} · used ${usedParental}/${m.maxParental}</span></div></button></div><button id="modal-cancel" class="btn btn-secondary" type="button">Cancel</button></div></div>`;
   };
 
   window.renderAppShell = function () {
-    return `
-      <div class="page">
-        ${window.renderTopbar()}
-        <div class="container">
-          ${window.renderMessageBlock()}
-          ${window.S.appView === 'admin' && window.isAdmin() ? window.renderAdminView() : window.renderCalendarView()}
-        </div>
-        ${window.renderDayOffModal()}
-        ${window.renderEditMemberModal()}
-      </div>
-    `;
+    return `<div class="page">${window.renderTopbar()}<div class="container">${window.renderMessageBlock()}${window.S.appView === 'admin' && window.isAdmin() ? window.renderAdminView() : window.renderCalendarView()}</div>${window.renderDayOffModal()}${window.renderEditMemberModal()}</div>`;
   };
 
   window.render = function () {
