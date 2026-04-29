@@ -303,14 +303,63 @@
     }
   }
 
+  async function doSignOut() {
+    try {
+      await window.signOut();
+
+      window.S.session = null;
+      window.S.user = null;
+      window.S.profile = null;
+      window.S.activeTeam = null;
+      window.S.membership = null;
+      window.S.memberships = [];
+      window.S.rosterMembers = [];
+      window.S.daysOff = [];
+      window.S.joinRequests = [];
+      window.S.activeInvite = null;
+      window.S.selectedMemberId = null;
+      window.S.pickStart = null;
+      window.S.modalRange = null;
+      window.S.editingMember = null;
+
+      window.location.replace(window.SABEE_CONFIG.APP_URL);
+    } catch (err) {
+      console.error(err);
+      window.setError(err.message || 'Sign out failed.');
+      window.render();
+    }
+  }
+
   window.bindGlobal = function () {
+    if (window.S.listenersBound) return;
+    window.S.listenersBound = true;
+
     document.addEventListener('keydown', handleAuthEnter);
 
     document.addEventListener('click', async e => {
       const target = e.target instanceof Element ? e.target : null;
       if (!target) return;
 
-      if (target.id === 'continue-invite-btn') {
+      if (target.closest('#sign-out-btn')) {
+        await doSignOut();
+        return;
+      }
+
+      if (target.closest('#go-admin-btn') || target.closest('#view-admin-btn')) {
+        if (window.isAdmin()) {
+          window.S.appView = 'admin';
+          window.render();
+        }
+        return;
+      }
+
+      if (target.closest('#go-calendar-btn') || target.closest('#view-calendar-btn')) {
+        window.S.appView = 'calendar';
+        window.render();
+        return;
+      }
+
+      if (target.closest('#continue-invite-btn')) {
         window.clearError();
         window.clearMessage();
 
@@ -327,7 +376,7 @@
         return;
       }
 
-      if (target.id === 'tab-login') {
+      if (target.closest('#tab-login')) {
         window.clearError();
         window.clearMessage();
         window.S.authMode = 'login';
@@ -335,7 +384,7 @@
         return;
       }
 
-      if (target.id === 'tab-register') {
+      if (target.closest('#tab-register')) {
         window.clearError();
         window.clearMessage();
         window.S.authMode = 'register';
@@ -343,7 +392,7 @@
         return;
       }
 
-      if (target.id === 'google-btn') {
+      if (target.closest('#google-btn')) {
         try {
           await window.signInWithGoogle();
         } catch (err) {
@@ -354,7 +403,7 @@
         return;
       }
 
-      if (target.id === 'login-btn') {
+      if (target.closest('#login-btn')) {
         const email = window.$('login-email')?.value?.trim();
         const password = window.$('login-password')?.value || '';
 
@@ -374,7 +423,7 @@
         return;
       }
 
-      if (target.id === 'register-btn') {
+      if (target.closest('#register-btn')) {
         const fullName = window.$('reg-full-name')?.value?.trim();
         const email = window.$('reg-email')?.value?.trim();
         const password = window.$('reg-password')?.value || '';
@@ -397,35 +446,7 @@
         return;
       }
 
-      if (target.id === 'sign-out-btn') {
-        try {
-          await window.signOut();
-
-          window.S.session = null;
-          window.S.user = null;
-          window.S.profile = null;
-          window.S.activeTeam = null;
-          window.S.membership = null;
-          window.S.memberships = [];
-          window.S.rosterMembers = [];
-          window.S.daysOff = [];
-          window.S.joinRequests = [];
-          window.S.activeInvite = null;
-          window.S.selectedMemberId = null;
-          window.S.pickStart = null;
-          window.S.modalRange = null;
-          window.S.editingMember = null;
-
-          window.location.replace(window.SABEE_CONFIG.APP_URL);
-        } catch (err) {
-          console.error(err);
-          window.setError(err.message || 'Sign out failed.');
-          window.render();
-        }
-        return;
-      }
-
-      if (target.id === 'tab-create-team') {
+      if (target.closest('#tab-create-team')) {
         window.clearError();
         window.clearMessage();
         window.S.landingMode = 'create';
@@ -433,7 +454,7 @@
         return;
       }
 
-      if (target.id === 'tab-join-team') {
+      if (target.closest('#tab-join-team')) {
         window.clearError();
         window.clearMessage();
         window.S.landingMode = 'join';
@@ -442,7 +463,7 @@
         return;
       }
 
-      if (target.id === 'create-team-btn') {
+      if (target.closest('#create-team-btn')) {
         const teamName = window.$('team-name')?.value?.trim();
         const creatorDisplayName = window.$('creator-display-name')?.value?.trim();
 
@@ -461,9 +482,10 @@
         return;
       }
 
-      if (target.classList.contains('request-join-btn')) {
-        const teamId = target.dataset.teamId;
-        const teamName = target.dataset.teamName || 'this team';
+      const requestJoinBtn = target.closest('.request-join-btn');
+      if (requestJoinBtn) {
+        const teamId = requestJoinBtn.dataset.teamId;
+        const teamName = requestJoinBtn.dataset.teamName || 'this team';
 
         const ok = window.confirm(
           `You are requesting access to "${teamName}". ` +
@@ -487,9 +509,10 @@
         return;
       }
 
-      if (target.classList.contains('approve-request-btn')) {
+      const approveBtn = target.closest('.approve-request-btn');
+      if (approveBtn) {
         try {
-          await window.approveJoinRequest(target.dataset.requestId);
+          await window.approveJoinRequest(approveBtn.dataset.requestId);
           await refreshTeamScopedData();
           window.setMessage('Request approved.', 'success');
           window.render();
@@ -501,9 +524,10 @@
         return;
       }
 
-      if (target.classList.contains('reject-request-btn')) {
+      const rejectBtn = target.closest('.reject-request-btn');
+      if (rejectBtn) {
         try {
-          await window.rejectJoinRequest(target.dataset.requestId);
+          await window.rejectJoinRequest(rejectBtn.dataset.requestId);
           await refreshTeamScopedData();
           window.setMessage('Request rejected.', 'success');
           window.render();
@@ -515,7 +539,7 @@
         return;
       }
 
-      if (target.id === 'copy-invite-btn') {
+      if (target.closest('#copy-invite-btn')) {
         const linkEl = window.$('active-invite-link');
         if (!linkEl) return;
 
@@ -531,7 +555,7 @@
         return;
       }
 
-      if (target.id === 'invite-btn') {
+      if (target.closest('#invite-btn')) {
         try {
           await window.createInvite(window.S.activeTeam.id);
           window.S.activeInvite = await window.loadActiveInvite(window.S.activeTeam.id);
@@ -545,9 +569,10 @@
         return;
       }
 
-      if (target.classList.contains('promote-admin-btn')) {
+      const promoteBtn = target.closest('.promote-admin-btn');
+      if (promoteBtn) {
         try {
-          await window.promoteToAdmin(target.dataset.membershipId);
+          await window.promoteToAdmin(promoteBtn.dataset.membershipId);
           await refreshTeamScopedData();
           window.setMessage('Member promoted to admin.', 'success');
           window.render();
@@ -559,31 +584,20 @@
         return;
       }
 
-      if (target.id === 'view-calendar-btn') {
-        window.S.appView = 'calendar';
-        window.render();
-        return;
-      }
-
-      if (target.id === 'view-admin-btn') {
-        window.S.appView = 'admin';
-        window.render();
-        return;
-      }
-
-      if (target.classList.contains('summary-card')) {
-        window.S.selectedMemberId = target.dataset.mid;
+      const summaryCard = target.closest('.summary-card');
+      if (summaryCard) {
+        window.S.selectedMemberId = summaryCard.dataset.mid;
         window.S.pickStart = null;
         window.render();
         return;
       }
 
-      if (target.id === 'prev-month') {
+      if (target.closest('#prev-month')) {
         navMonth(-1);
         return;
       }
 
-      if (target.id === 'next-month') {
+      if (target.closest('#next-month')) {
         navMonth(1);
         return;
       }
@@ -594,39 +608,40 @@
         return;
       }
 
-      if (target.id === 'selection-cancel') {
+      if (target.closest('#selection-cancel')) {
         window.S.pickStart = null;
         window.render();
         return;
       }
 
-      if (target.id === 'modal-cancel') {
+      if (target.closest('#modal-cancel')) {
         window.S.modalRange = null;
         window.render();
         return;
       }
 
-      if (target.id === 'modal-btn-pto') {
+      if (target.closest('#modal-btn-pto')) {
         await confirmDayOffType('pto');
         return;
       }
 
-      if (target.id === 'modal-btn-sick') {
+      if (target.closest('#modal-btn-sick')) {
         await confirmDayOffType('sick');
         return;
       }
 
-      if (target.id === 'modal-btn-parental') {
+      if (target.closest('#modal-btn-parental')) {
         await confirmDayOffType('parental');
         return;
       }
 
-      if (target.classList.contains('entry-delete-btn')) {
+      const deleteEntryBtn = target.closest('.entry-delete-btn');
+      if (deleteEntryBtn) {
         if (!window.canEditSelectedMember()) return;
         if (!window.confirm('Delete this day off entry?')) return;
 
         try {
-          await window.deleteDayOff(target.dataset.entryId);
+          await window.deleteDayOff(deleteEntryBtn.dataset.entryId);
           await refreshTeamScopedData();
           window.setMessage('Day off entry deleted.', 'success');
           window.render();
@@ -638,33 +653,35 @@
         return;
       }
 
-      if (target.id === 'add-roster-member-btn') {
+      if (target.closest('#add-roster-member-btn')) {
         await addRosterMember();
         return;
       }
 
-      if (target.classList.contains('edit-roster-member-btn')) {
-        window.S.editingMember = window.rosterMember(target.dataset.mid);
+      const editRosterBtn = target.closest('.edit-roster-member-btn');
+      if (editRosterBtn) {
+        window.S.editingMember = window.rosterMember(editRosterBtn.dataset.mid);
         window.render();
         return;
       }
 
-      if (target.id === 'cancel-edit-member-btn') {
+      if (target.closest('#cancel-edit-member-btn')) {
         window.S.editingMember = null;
         window.render();
         return;
       }
 
-      if (target.id === 'save-edit-member-btn') {
+      if (target.closest('#save-edit-member-btn')) {
         await saveEditedRosterMember();
         return;
       }
 
-      if (target.classList.contains('delete-roster-member-btn')) {
+      const deleteRosterBtn = target.closest('.delete-roster-member-btn');
+      if (deleteRosterBtn) {
         if (!window.confirm('Delete this roster member and all related days off?')) return;
 
         try {
-          await window.deleteRosterMember(target.dataset.mid);
+          await window.deleteRosterMember(deleteRosterBtn.dataset.mid);
           await refreshTeamScopedData();
           window.setMessage('Roster member deleted.', 'success');
           window.render();
@@ -676,7 +693,7 @@
         return;
       }
 
-      if (target.id === 'reset-team-data-btn') {
+      if (target.closest('#reset-team-data-btn')) {
         if (!window.confirm('Reset all roster members and all days off for this team?')) return;
 
         try {
@@ -705,6 +722,8 @@
   };
 
   window.init = async function () {
+    window.bindGlobal();
+
     window.S.loading = true;
     window.clearError();
     window.clearMessage();
@@ -744,7 +763,6 @@
         }
       });
 
-      window.bindGlobal();
       startInviteCountdown();
 
       window.S.loading = false;
