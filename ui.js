@@ -21,6 +21,7 @@
 
   window.renderTopbar = function () {
     const profile = window.S.profile;
+
     return `
       <div class="topbar">
         <div class="topbar-inner">
@@ -30,6 +31,7 @@
               <span class="version">beta v6</span>
             </div>
           </div>
+
           <div class="topbar-right">
             ${window.S.activeTeam ? `<span class="meta"><strong>${window.esc(window.S.activeTeam.name)}</strong></span>` : ''}
             ${profile ? `<span class="meta">${window.esc(profile.full_name || profile.email || 'Signed in')}</span>` : ''}
@@ -81,9 +83,7 @@
                   </div>
 
                   <div class="row">
-                    <button id="continue-invite-btn" class="btn btn-primary" type="button">
-                      Continue to join this team
-                    </button>
+                    <button id="continue-invite-btn" class="btn btn-primary" type="button">Continue to join this team</button>
                   </div>
                 </div>
               `
@@ -180,7 +180,6 @@
             </div>
 
             ${window.renderMessageBlock()}
-
             ${mode === 'create' ? window.renderCreateTeamPane() : window.renderJoinTeamPane()}
           </div>
         </div>
@@ -350,10 +349,7 @@
       return `<span class="dot" style="background:${m.color}"></span>`;
     }).join('');
 
-    if (extra) {
-      h += `<span class="small muted">…</span>`;
-    }
-
+    if (extra) h += `<span class="small muted">…</span>`;
     return h;
   };
 
@@ -488,15 +484,15 @@
       return `<div class="empty">No team users loaded.</div>`;
     }
 
+    const isOwner = window.S.membership?.role === 'owner';
+
     return window.S.memberships.map(m => {
       const badgeClass =
         m.role === 'owner' ? 'badge-owner' :
         m.role === 'admin' ? 'badge-admin' :
         'badge-member';
 
-      const canPromote =
-        window.S.membership?.role === 'owner' &&
-        m.role === 'member';
+      const canPromote = isOwner && m.role === 'member';
 
       return `
         <div class="list-item">
@@ -525,9 +521,7 @@
             <span class="summary-card-dot" style="background:${m.color}"></span>
             <strong>${window.esc(m.name)}</strong>
           </div>
-          <div class="small muted">
-            PTO ${m.maxPTO} · Parental ${m.maxParental}${m.userId ? ' · linked user' : ' · placeholder'}
-          </div>
+          <div class="small muted">PTO ${m.maxPTO} · Parental ${m.maxParental}${m.userId ? ' · linked user' : ' · placeholder'}</div>
         </div>
         <div class="inline-actions">
           <button class="btn btn-secondary edit-roster-member-btn" data-mid="${m.id}" type="button">Edit</button>
@@ -544,9 +538,9 @@
     return `
       <div class="stack">
         <div class="card main-card">
-          <h2 style="margin:0 0 8px">Team Management</h2>
+          <h2 style="margin:0 0 8px">Admin</h2>
           <div class="meta">
-            This is the v5-style admin page for managing team roster, access, invites, and reset actions.
+            Manage team members, allowances, invites, join requests, and reset actions.
           </div>
         </div>
 
@@ -579,20 +573,16 @@
 
           <section class="admin-section">
             <h3 class="section-title">Pending join requests</h3>
-            <div class="list">
-              ${window.renderPendingRequests()}
-            </div>
+            <div class="list">${window.renderPendingRequests()}</div>
           </section>
 
           <section class="admin-section">
             <h3 class="section-title">Team user accounts</h3>
             <div class="alert alert-info">
-              Owners can promote active team users to admin. Admins can manage the roster and time off, but only owners can grant admin rights.
+              Owners can grant admin rights. Admins can manage roster members and days off, but cannot promote other users.
             </div>
-            <div class="list">
-              ${window.renderMemberships()}
-            </div>
-            ${!isOwner ? `<div class="small muted">Only the team owner can grant admin rights.</div>` : ''}
+            <div class="list">${window.renderMemberships()}</div>
+            ${!isOwner ? `<div class="small muted">Only the owner can grant admin rights.</div>` : ''}
           </section>
 
           <section class="admin-section">
@@ -624,9 +614,7 @@
 
           <section class="admin-section">
             <h3 class="section-title">Roster members</h3>
-            <div class="list">
-              ${window.renderRosterManagementList()}
-            </div>
+            <div class="list">${window.renderRosterManagementList()}</div>
           </section>
 
           <section class="admin-section">
