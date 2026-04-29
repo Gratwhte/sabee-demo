@@ -407,7 +407,7 @@
     }
 
     if (!window.canEditSelectedMember()) {
-      return `<div class="alert alert-info">You can view all team calendars. You can edit your own calendar${window.isAdmin() ? ' and, as admin, any team member calendar' : ''}.</div>`;
+      return `<div class="alert alert-info">You can view all team calendars. Owners and admins can edit anyone. Regular users can edit only their own calendar.</div>`;
     }
 
     if (window.S.pickStart) {
@@ -424,37 +424,50 @@
 
   window.renderCalendarView = function () {
     const sel = window.rosterMember(window.S.selectedMemberId);
+    const canAdmin = window.isAdmin();
 
     return `
-      <div class="calendar-wrap">
-        <section class="calendar-panel">
-          <div class="calendar-nav">
-            <button id="prev-month" class="btn btn-ghost nav-btn" type="button">‹</button>
-            <h2>${window.MONTHS[window.S.month.m]} ${window.S.month.y}</h2>
-            <button id="next-month" class="btn btn-ghost nav-btn" type="button">›</button>
+      <div class="stack">
+        <div class="card main-card">
+          <div class="row" style="justify-content:space-between;align-items:center">
+            <div>
+              <h2 style="margin:0 0 6px">Calendar</h2>
+              <div class="meta">Everyone can view all team calendars. Owners/admins can edit anyone. Regular users can edit only their own calendar.</div>
+            </div>
+            ${canAdmin ? `<button id="go-admin-btn" class="btn btn-secondary" type="button">Open Admin Page</button>` : ''}
           </div>
+        </div>
 
-          <div class="calendar-weekdays">
-            <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span>
-            <span>Fri</span><span>Sat</span><span>Sun</span>
-          </div>
+        <div class="calendar-wrap">
+          <section class="calendar-panel">
+            <div class="calendar-nav">
+              <button id="prev-month" class="btn btn-ghost nav-btn" type="button">‹</button>
+              <h2>${window.MONTHS[window.S.month.m]} ${window.S.month.y}</h2>
+              <button id="next-month" class="btn btn-ghost nav-btn" type="button">›</button>
+            </div>
 
-          <div id="calendar-days" class="calendar-grid">${window.renderCalendar()}</div>
+            <div class="calendar-weekdays">
+              <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span>
+              <span>Fri</span><span>Sat</span><span>Sun</span>
+            </div>
 
-          <div style="margin-top:14px">
-            ${window.renderSelectionStatus()}
-          </div>
-        </section>
+            <div id="calendar-days" class="calendar-grid">${window.renderCalendar()}</div>
 
-        <aside class="side-panel">
-          <h3 style="margin:0 0 12px">Team Members</h3>
-          <div id="summary-list" class="summary-list">${window.renderSummaryList()}</div>
+            <div style="margin-top:14px">
+              ${window.renderSelectionStatus()}
+            </div>
+          </section>
 
-          <div class="hr"></div>
+          <aside class="side-panel">
+            <h3 style="margin:0 0 12px">Team Members</h3>
+            <div id="summary-list" class="summary-list">${window.renderSummaryList()}</div>
 
-          <h3 style="margin:0 0 12px">${sel ? `${window.esc(sel.name)}'s Days Off` : 'Days Off'}</h3>
-          <div id="entries-list" class="entry-list">${window.renderEntries()}</div>
-        </aside>
+            <div class="hr"></div>
+
+            <h3 style="margin:0 0 12px">${sel ? `${window.esc(sel.name)}'s Days Off` : 'Days Off'}</h3>
+            <div id="entries-list" class="entry-list">${window.renderEntries()}</div>
+          </aside>
+        </div>
       </div>
     `;
   };
@@ -484,15 +497,13 @@
       return `<div class="empty">No team users loaded.</div>`;
     }
 
-    const isOwner = window.S.membership?.role === 'owner';
-
     return window.S.memberships.map(m => {
       const badgeClass =
         m.role === 'owner' ? 'badge-owner' :
         m.role === 'admin' ? 'badge-admin' :
         'badge-member';
 
-      const canPromote = isOwner && m.role === 'member';
+      const canPromote = window.isOwner() && m.role === 'member';
 
       return `
         <div class="list-item">
@@ -533,14 +544,16 @@
 
   window.renderAdminView = function () {
     const activeInvite = window.S.activeInvite;
-    const isOwner = window.S.membership?.role === 'owner';
 
     return `
       <div class="stack">
         <div class="card main-card">
-          <h2 style="margin:0 0 8px">Admin</h2>
-          <div class="meta">
-            Manage team members, allowances, invites, join requests, and reset actions.
+          <div class="row" style="justify-content:space-between;align-items:center">
+            <div>
+              <h2 style="margin:0 0 6px">Admin Page</h2>
+              <div class="meta">Manage roster members, invites, join requests, allowances, and team administration.</div>
+            </div>
+            <button id="go-calendar-btn" class="btn btn-secondary" type="button">Back to Calendar</button>
           </div>
         </div>
 
@@ -579,15 +592,13 @@
           <section class="admin-section">
             <h3 class="section-title">Team user accounts</h3>
             <div class="alert alert-info">
-              Owners can grant admin rights. Admins can manage roster members and days off, but cannot promote other users.
+              Owners can grant admin rights. Admins can manage roster members and team data but cannot promote other users.
             </div>
             <div class="list">${window.renderMemberships()}</div>
-            ${!isOwner ? `<div class="small muted">Only the owner can grant admin rights.</div>` : ''}
           </section>
 
           <section class="admin-section">
             <h3 class="section-title">Add roster member</h3>
-
             <div class="grid-2" style="margin-bottom:14px">
               <div class="field">
                 <label for="new-member-name">Name</label>
@@ -733,11 +744,6 @@
         ${window.renderTopbar()}
         <div class="container">
           ${window.renderMessageBlock()}
-
-          <div class="view-tabs">
-            <button id="view-calendar-btn" class="tab-btn ${window.S.appView === 'calendar' ? 'active' : ''}" type="button">Calendar</button>
-            ${canAdmin ? `<button id="view-admin-btn" class="tab-btn ${window.S.appView === 'admin' ? 'active' : ''}" type="button">Admin</button>` : ''}
-          </div>
 
           ${
             window.S.appView === 'admin' && canAdmin
