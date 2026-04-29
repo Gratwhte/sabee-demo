@@ -42,9 +42,7 @@
 
     month: { y: new Date().getFullYear(), m: new Date().getMonth() },
     pickStart: null,
-    hoverDate: null,
     modalRange: null,
-    prevFocus: null,
 
     pendingInviteToken: null,
     invitePreview: null,
@@ -57,7 +55,9 @@
     loading: true,
     message: null,
     error: null,
-    editingMember: null
+    editingMember: null,
+
+    listenersBound: false
   };
 
   window.$ = function (id) {
@@ -157,15 +157,6 @@
     });
   };
 
-  window.fmtL = function (s) {
-    return window.pdate(s).toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  };
-
   window.rosterMember = function (id) {
     return window.S.rosterMembers.find(m => m.id === id) || null;
   };
@@ -205,8 +196,21 @@
     return r >= 0.9 ? 'danger' : r >= 0.7 ? 'warning' : 'low';
   };
 
+  window.currentRole = function () {
+    if (window.S.membership?.role) return window.S.membership.role;
+    if (!window.S.user) return null;
+
+    const mine = window.S.memberships.find(m => m.user_id === window.S.user.id || m.userId === window.S.user.id);
+    return mine?.role || null;
+  };
+
   window.isAdmin = function () {
-    return ['owner', 'admin'].includes(window.S.membership?.role);
+    const role = window.currentRole();
+    return role === 'owner' || role === 'admin';
+  };
+
+  window.isOwner = function () {
+    return window.currentRole() === 'owner';
   };
 
   window.canEditSelectedMember = function () {
