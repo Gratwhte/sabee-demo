@@ -21,6 +21,7 @@
 
   window.renderTopbar = function () {
     const profile = window.S.profile;
+    const canAdmin = window.isAdmin();
 
     return `
       <div class="topbar">
@@ -34,6 +35,17 @@
 
           <div class="topbar-right">
             ${window.S.activeTeam ? `<span class="meta"><strong>${window.esc(window.S.activeTeam.name)}</strong></span>` : ''}
+
+            ${canAdmin ? `
+              <button
+                class="btn btn-secondary"
+                id="${window.S.appView === 'admin' ? 'topnav-calendar-btn' : 'topnav-admin-btn'}"
+                type="button"
+              >
+                ${window.S.appView === 'admin' ? 'Calendar view' : 'Admin view'}
+              </button>
+            ` : ''}
+
             ${profile ? `<span class="meta">${window.esc(profile.full_name || profile.email || 'Signed in')}</span>` : ''}
             ${profile ? `<button class="btn btn-secondary" id="sign-out-btn" type="button">Sign out</button>` : ''}
           </div>
@@ -424,50 +436,37 @@
 
   window.renderCalendarView = function () {
     const sel = window.rosterMember(window.S.selectedMemberId);
-    const canAdmin = window.isAdmin();
 
     return `
-      <div class="stack">
-        <div class="card main-card">
-          <div class="row" style="justify-content:space-between;align-items:center">
-            <div>
-              <h2 style="margin:0 0 6px">Calendar</h2>
-              <div class="meta">Everyone can view all team calendars. Owners/admins can edit anyone. Regular users can edit only their own calendar.</div>
-            </div>
-            ${canAdmin ? `<button id="go-admin-btn" class="btn btn-secondary" type="button">Open Admin Page</button>` : ''}
+      <div class="calendar-wrap">
+        <section class="calendar-panel">
+          <div class="calendar-nav">
+            <button id="prev-month" class="btn btn-ghost nav-btn" type="button">‹</button>
+            <h2>${window.MONTHS[window.S.month.m]} ${window.S.month.y}</h2>
+            <button id="next-month" class="btn btn-ghost nav-btn" type="button">›</button>
           </div>
-        </div>
 
-        <div class="calendar-wrap">
-          <section class="calendar-panel">
-            <div class="calendar-nav">
-              <button id="prev-month" class="btn btn-ghost nav-btn" type="button">‹</button>
-              <h2>${window.MONTHS[window.S.month.m]} ${window.S.month.y}</h2>
-              <button id="next-month" class="btn btn-ghost nav-btn" type="button">›</button>
-            </div>
+          <div class="calendar-weekdays">
+            <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span>
+            <span>Fri</span><span>Sat</span><span>Sun</span>
+          </div>
 
-            <div class="calendar-weekdays">
-              <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span>
-              <span>Fri</span><span>Sat</span><span>Sun</span>
-            </div>
+          <div id="calendar-days" class="calendar-grid">${window.renderCalendar()}</div>
 
-            <div id="calendar-days" class="calendar-grid">${window.renderCalendar()}</div>
+          <div style="margin-top:14px">
+            ${window.renderSelectionStatus()}
+          </div>
+        </section>
 
-            <div style="margin-top:14px">
-              ${window.renderSelectionStatus()}
-            </div>
-          </section>
+        <aside class="side-panel">
+          <h3 style="margin:0 0 12px">Team Members</h3>
+          <div id="summary-list" class="summary-list">${window.renderSummaryList()}</div>
 
-          <aside class="side-panel">
-            <h3 style="margin:0 0 12px">Team Members</h3>
-            <div id="summary-list" class="summary-list">${window.renderSummaryList()}</div>
+          <div class="hr"></div>
 
-            <div class="hr"></div>
-
-            <h3 style="margin:0 0 12px">${sel ? `${window.esc(sel.name)}'s Days Off` : 'Days Off'}</h3>
-            <div id="entries-list" class="entry-list">${window.renderEntries()}</div>
-          </aside>
-        </div>
+          <h3 style="margin:0 0 12px">${sel ? `${window.esc(sel.name)}'s Days Off` : 'Days Off'}</h3>
+          <div id="entries-list" class="entry-list">${window.renderEntries()}</div>
+        </aside>
       </div>
     `;
   };
@@ -546,99 +545,87 @@
     const activeInvite = window.S.activeInvite;
 
     return `
-      <div class="stack">
-        <div class="card main-card">
-          <div class="row" style="justify-content:space-between;align-items:center">
-            <div>
-              <h2 style="margin:0 0 6px">Admin Page</h2>
-              <div class="meta">Manage roster members, invites, join requests, allowances, and team administration.</div>
-            </div>
-            <button id="go-calendar-btn" class="btn btn-secondary" type="button">Back to Calendar</button>
+      <div class="admin-grid">
+        <section class="admin-section">
+          <h3 class="section-title">Invite link</h3>
+          <div id="invite-link-area" class="stack">
+            ${
+              activeInvite && activeInvite.is_active
+                ? `
+                  <div class="alert alert-success">
+                    Active invite available. Expires in
+                    <span id="active-invite-countdown">${window.esc(window.formatRemaining(activeInvite.expires_at))}</span>.
+                  </div>
+                  <div class="codebox" id="active-invite-link">${window.esc(`${window.SABEE_CONFIG.APP_URL}?invite=${activeInvite.token}`)}</div>
+                  <div class="row">
+                    <button id="invite-btn" class="btn btn-primary" type="button">Show / refresh invite</button>
+                    <button id="copy-invite-btn" class="btn btn-secondary" type="button">Copy link</button>
+                  </div>
+                `
+                : `
+                  <div class="empty">No active invite yet.</div>
+                  <div class="row">
+                    <button id="invite-btn" class="btn btn-primary" type="button">Create invite</button>
+                  </div>
+                `
+            }
           </div>
-        </div>
+        </section>
 
-        <div class="admin-grid">
-          <section class="admin-section">
-            <h3 class="section-title">Invite link</h3>
-            <div id="invite-link-area" class="stack">
-              ${
-                activeInvite && activeInvite.is_active
-                  ? `
-                    <div class="alert alert-success">
-                      Active invite available. Expires in
-                      <span id="active-invite-countdown">${window.esc(window.formatRemaining(activeInvite.expires_at))}</span>.
-                    </div>
-                    <div class="codebox" id="active-invite-link">${window.esc(`${window.SABEE_CONFIG.APP_URL}?invite=${activeInvite.token}`)}</div>
-                    <div class="row">
-                      <button id="invite-btn" class="btn btn-primary" type="button">Show / refresh invite</button>
-                      <button id="copy-invite-btn" class="btn btn-secondary" type="button">Copy link</button>
-                    </div>
-                  `
-                  : `
-                    <div class="empty">No active invite yet.</div>
-                    <div class="row">
-                      <button id="invite-btn" class="btn btn-primary" type="button">Create invite</button>
-                    </div>
-                  `
-              }
+        <section class="admin-section">
+          <h3 class="section-title">Pending join requests</h3>
+          <div class="list">${window.renderPendingRequests()}</div>
+        </section>
+
+        <section class="admin-section">
+          <h3 class="section-title">Team user accounts</h3>
+          <div class="alert alert-info">
+            Owners can grant admin rights. Admins can manage roster members and team data but cannot promote other users.
+          </div>
+          <div class="list">${window.renderMemberships()}</div>
+        </section>
+
+        <section class="admin-section">
+          <h3 class="section-title">Add roster member</h3>
+          <div class="grid-2" style="margin-bottom:14px">
+            <div class="field">
+              <label for="new-member-name">Name</label>
+              <input id="new-member-name" class="input" type="text" placeholder="e.g. Anna">
             </div>
-          </section>
-
-          <section class="admin-section">
-            <h3 class="section-title">Pending join requests</h3>
-            <div class="list">${window.renderPendingRequests()}</div>
-          </section>
-
-          <section class="admin-section">
-            <h3 class="section-title">Team user accounts</h3>
-            <div class="alert alert-info">
-              Owners can grant admin rights. Admins can manage roster members and team data but cannot promote other users.
+            <div class="field">
+              <label for="new-member-color">Color</label>
+              <input id="new-member-color" class="input" type="color" value="${window.nextColor(window.S.rosterMembers)}">
             </div>
-            <div class="list">${window.renderMemberships()}</div>
-          </section>
-
-          <section class="admin-section">
-            <h3 class="section-title">Add roster member</h3>
-            <div class="grid-2" style="margin-bottom:14px">
-              <div class="field">
-                <label for="new-member-name">Name</label>
-                <input id="new-member-name" class="input" type="text" placeholder="e.g. Anna">
-              </div>
-              <div class="field">
-                <label for="new-member-color">Color</label>
-                <input id="new-member-color" class="input" type="color" value="${window.nextColor(window.S.rosterMembers)}">
-              </div>
-              <div class="field">
-                <label for="new-member-pto">PTO allowance</label>
-                <input id="new-member-pto" class="input" type="number" min="0" value="25">
-              </div>
-              <div class="field">
-                <label for="new-member-parental">Parental allowance</label>
-                <input id="new-member-parental" class="input" type="number" min="0" value="0">
-              </div>
+            <div class="field">
+              <label for="new-member-pto">PTO allowance</label>
+              <input id="new-member-pto" class="input" type="number" min="0" value="25">
             </div>
-
-            <div class="row">
-              <button id="add-roster-member-btn" class="btn btn-primary" type="button">Add roster member</button>
+            <div class="field">
+              <label for="new-member-parental">Parental allowance</label>
+              <input id="new-member-parental" class="input" type="number" min="0" value="0">
             </div>
-          </section>
+          </div>
 
-          <section class="admin-section">
-            <h3 class="section-title">Roster members</h3>
-            <div class="list">${window.renderRosterManagementList()}</div>
-          </section>
+          <div class="row">
+            <button id="add-roster-member-btn" class="btn btn-primary" type="button">Add roster member</button>
+          </div>
+        </section>
 
-          <section class="admin-section">
-            <h3 class="section-title">Danger zone</h3>
-            <div class="alert alert-warn">
-              Resetting team data will delete all roster members and all days off for this team.
-              It will not delete authenticated user accounts or remove the team itself.
-            </div>
-            <div class="row">
-              <button id="reset-team-data-btn" class="btn btn-danger" type="button">Reset team data</button>
-            </div>
-          </section>
-        </div>
+        <section class="admin-section">
+          <h3 class="section-title">Roster members</h3>
+          <div class="list">${window.renderRosterManagementList()}</div>
+        </section>
+
+        <section class="admin-section">
+          <h3 class="section-title">Danger zone</h3>
+          <div class="alert alert-warn">
+            Resetting team data will delete all roster members and all days off for this team.
+            It will not delete authenticated user accounts or remove the team itself.
+          </div>
+          <div class="row">
+            <button id="reset-team-data-btn" class="btn btn-danger" type="button">Reset team data</button>
+          </div>
+        </section>
       </div>
     `;
   };
@@ -737,19 +724,14 @@
   };
 
   window.renderAppShell = function () {
-    const canAdmin = window.isAdmin();
-
     return `
       <div class="page">
         ${window.renderTopbar()}
         <div class="container">
           ${window.renderMessageBlock()}
-
-          ${
-            window.S.appView === 'admin' && canAdmin
-              ? window.renderAdminView()
-              : window.renderCalendarView()
-          }
+          ${window.S.appView === 'admin' && window.isAdmin()
+            ? window.renderAdminView()
+            : window.renderCalendarView()}
         </div>
 
         ${window.renderDayOffModal()}
