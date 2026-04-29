@@ -306,28 +306,31 @@
   async function doSignOut() {
     try {
       await window.signOut();
-
-      window.S.session = null;
-      window.S.user = null;
-      window.S.profile = null;
-      window.S.activeTeam = null;
-      window.S.membership = null;
-      window.S.memberships = [];
-      window.S.rosterMembers = [];
-      window.S.daysOff = [];
-      window.S.joinRequests = [];
-      window.S.activeInvite = null;
-      window.S.selectedMemberId = null;
-      window.S.pickStart = null;
-      window.S.modalRange = null;
-      window.S.editingMember = null;
-
-      window.location.replace(window.SABEE_CONFIG.APP_URL);
     } catch (err) {
-      console.error(err);
-      window.setError(err.message || 'Sign out failed.');
-      window.render();
+      console.error('Supabase signOut failed, clearing local state anyway', err);
     }
+
+    window.S.session = null;
+    window.S.user = null;
+    window.S.profile = null;
+    window.S.activeTeam = null;
+    window.S.membership = null;
+    window.S.memberships = [];
+    window.S.rosterMembers = [];
+    window.S.daysOff = [];
+    window.S.joinRequests = [];
+    window.S.activeInvite = null;
+    window.S.selectedMemberId = null;
+    window.S.pickStart = null;
+    window.S.modalRange = null;
+    window.S.editingMember = null;
+    window.S.appView = 'calendar';
+    window.S.loading = false;
+    window.clearError();
+    window.setMessage('Signed out.', 'success');
+
+    await loadInvitePreviewIfPresent();
+    window.render();
   }
 
   window.bindGlobal = function () {
@@ -345,7 +348,7 @@
         return;
       }
 
-      if (target.closest('#go-admin-btn') || target.closest('#view-admin-btn')) {
+      if (target.closest('#topnav-admin-btn')) {
         if (window.isAdmin()) {
           window.S.appView = 'admin';
           window.render();
@@ -353,7 +356,7 @@
         return;
       }
 
-      if (target.closest('#go-calendar-btn') || target.closest('#view-calendar-btn')) {
+      if (target.closest('#topnav-calendar-btn')) {
         window.S.appView = 'calendar';
         window.render();
         return;
