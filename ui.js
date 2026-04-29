@@ -5,7 +5,6 @@
     if (window.S.error) {
       return `<div class="alert alert-error">${window.esc(window.S.error)}</div>`;
     }
-
     if (window.S.message) {
       const map = {
         info: 'alert-info',
@@ -15,13 +14,13 @@
       };
       return `<div class="alert ${map[window.S.message.type] || 'alert-info'}">${window.esc(window.S.message.text)}</div>`;
     }
-
     return '';
   };
 
   window.renderTopbar = function () {
     const profile = window.S.profile;
-    const canAdmin = window.isAdmin();
+    const isAdmin = window.isAdmin();
+    const isCalendarView = window.S.appView === 'calendar';
 
     return `
       <div class="topbar">
@@ -36,13 +35,9 @@
           <div class="topbar-right">
             ${window.S.activeTeam ? `<span class="meta"><strong>${window.esc(window.S.activeTeam.name)}</strong></span>` : ''}
 
-            ${canAdmin ? `
-              <button
-                class="btn btn-secondary"
-                id="${window.S.appView === 'admin' ? 'topnav-calendar-btn' : 'topnav-admin-btn'}"
-                type="button"
-              >
-                ${window.S.appView === 'admin' ? 'Calendar view' : 'Admin view'}
+            ${isAdmin && window.S.activeTeam ? `
+              <button class="btn btn-secondary" id="topnav-view-toggle" type="button">
+                ${isCalendarView ? 'Admin view' : 'Calendar view'}
               </button>
             ` : ''}
 
@@ -66,9 +61,7 @@
               <h2>Team invitation</h2>
               <p>You were invited to join a Sabee team.</p>
             </div>
-
             ${window.renderMessageBlock()}
-
             ${
               !preview ? `
                 <div class="alert alert-error">This invite could not be loaded.</div>
@@ -84,16 +77,13 @@
                     <label>Invited team</label>
                     <div class="input">${window.esc(preview.team_name)}</div>
                   </div>
-
                   <div class="alert alert-info">
                     This invite expires in <span id="invite-preview-countdown">${window.esc(window.formatRemaining(preview.expires_at))}</span>.
                   </div>
-
                   <div class="alert alert-warn">
                     In this version of Sabee, each user can belong to only one team at a time.
                     If you continue with this invitation and join the team, your current active team access will be replaced.
                   </div>
-
                   <div class="row">
                     <button id="continue-invite-btn" class="btn btn-primary" type="button">Continue to join this team</button>
                   </div>
@@ -116,54 +106,26 @@
           <div class="card auth-card">
             <div class="auth-head">
               <h2>${window.S.pendingInviteToken && window.S.inviteContinueRequested ? 'Sign in to continue' : 'Set up your team'}</h2>
-              <p>${
-                window.S.pendingInviteToken && window.S.inviteContinueRequested
-                  ? 'Log in or register to continue joining this invited team.'
-                  : 'Create a new team or sign in to join one.'
-              }</p>
+              <p>${window.S.pendingInviteToken && window.S.inviteContinueRequested ? 'Log in or register to continue joining this invited team.' : 'Create a new team or sign in to join one.'}</p>
             </div>
-
             <div class="tabs">
               <button id="tab-login" class="tab-btn ${mode === 'login' ? 'active' : ''}" type="button">Log in</button>
               <button id="tab-register" class="tab-btn ${mode === 'register' ? 'active' : ''}" type="button">Register</button>
             </div>
-
             ${window.renderMessageBlock()}
-
             <div class="stack">
-              ${mode === 'register' ? `
-                <div class="field">
-                  <label for="reg-full-name">Full name</label>
-                  <input id="reg-full-name" class="input" type="text" placeholder="Your name">
-                </div>
-              ` : ''}
-
+              ${mode === 'register' ? `<div class="field"><label for="reg-full-name">Full name</label><input id="reg-full-name" class="input" type="text" placeholder="Your name"></div>` : ''}
               <div class="field">
                 <label for="${mode === 'register' ? 'reg-email' : 'login-email'}">Email</label>
                 <input id="${mode === 'register' ? 'reg-email' : 'login-email'}" class="input" type="email" placeholder="you@example.com">
               </div>
-
               <div class="field">
                 <label for="${mode === 'register' ? 'reg-password' : 'login-password'}">Password</label>
                 <input id="${mode === 'register' ? 'reg-password' : 'login-password'}" class="input" type="password" placeholder="••••••••">
               </div>
-
-              ${mode === 'register' ? `
-                <div class="legal-box">
-                  <strong>Demo data handling notice</strong><br><br>
-                  Sabee is currently a demo application. If you create an account, we store your email address,
-                  profile information you provide, your team membership, and team-related activity inside Supabase.
-                  Google sign-in may also provide us with your name and avatar if available.<br><br>
-                  This demo is not intended for sensitive personal, financial, health, or legally confidential data.
-                  Please do not upload anything private that you would not want visible to demo administrators or testers.
-                  Features, storage rules, and data retention may change while the demo evolves.
-                </div>
-              ` : ''}
-
+              ${mode === 'register' ? `<div class="legal-box"><strong>Demo data handling notice</strong><br><br>Sabee is currently a demo application. If you create an account, we store your email address, profile information you provide, your team membership, and team-related activity inside Supabase. Google sign-in may also provide us with your name and avatar if available.<br><br>This demo is not intended for sensitive personal, financial, health, or legally confidential data. Please do not upload anything private that you would not want visible to demo administrators or testers. Features, storage rules, and data retention may change while the demo evolves.</div>` : ''}
               <div class="row">
-                <button id="${mode === 'register' ? 'register-btn' : 'login-btn'}" class="btn btn-primary" type="button">
-                  ${mode === 'register' ? 'Create account' : 'Log in'}
-                </button>
+                <button id="${mode === 'register' ? 'register-btn' : 'login-btn'}" class="btn btn-primary" type="button">${mode === 'register' ? 'Create account' : 'Log in'}</button>
                 <button id="google-btn" class="btn btn-secondary" type="button">Continue with Google</button>
               </div>
             </div>
@@ -175,7 +137,6 @@
 
   window.renderTeamGatewayPage = function () {
     const mode = window.S.landingMode;
-
     return `
       <div class="page">
         ${window.renderTopbar()}
@@ -185,12 +146,10 @@
               <h2>Set up your team</h2>
               <p>Create a new team or request access to an existing one.</p>
             </div>
-
             <div class="tabs">
               <button id="tab-create-team" class="tab-btn ${mode === 'create' ? 'active' : ''}" type="button">Create team</button>
               <button id="tab-join-team" class="tab-btn ${mode === 'join' ? 'active' : ''}" type="button">Join team</button>
             </div>
-
             ${window.renderMessageBlock()}
             ${mode === 'create' ? window.renderCreateTeamPane() : window.renderJoinTeamPane()}
           </div>
@@ -202,25 +161,10 @@
   window.renderCreateTeamPane = function () {
     return `
       <div class="stack">
-        <div class="field">
-          <label for="team-name">Team name</label>
-          <input id="team-name" class="input" type="text" placeholder="e.g. Product Europe">
-        </div>
-
-        <div class="field">
-          <label for="creator-display-name">Your display name inside the team roster</label>
-          <input id="creator-display-name" class="input" type="text" placeholder="e.g. Anna">
-        </div>
-
-        <div class="alert alert-info">
-          Team names must be unique.
-          In this version of Sabee, each account can belong to only one team at a time.
-          If you later join a different team, your active team assignment will switch.
-        </div>
-
-        <div class="row">
-          <button id="create-team-btn" class="btn btn-primary" type="button">Create team</button>
-        </div>
+        <div class="field"><label for="team-name">Team name</label><input id="team-name" class="input" type="text" placeholder="e.g. Product Europe"></div>
+        <div class="field"><label for="creator-display-name">Your display name inside the team roster</label><input id="creator-display-name" class="input" type="text" placeholder="e.g. Anna"></div>
+        <div class="alert alert-info">Team names must be unique. In this version of Sabee, each account can belong to only one team at a time. If you later join a different team, your active team assignment will switch.</div>
+        <div class="row"><button id="create-team-btn" class="btn btn-primary" type="button">Create team</button></div>
       </div>
     `;
   };
@@ -228,78 +172,42 @@
   window.renderJoinTeamPane = function () {
     return `
       <div class="stack">
-        <div class="field">
-          <label for="team-search">Search teams by name</label>
-          <input id="team-search" class="input" type="text" placeholder="Search teams...">
-        </div>
-
-        <div class="alert alert-warn">
-          In this demo version, you can only belong to one team at a time.
-          If an admin approves your request for another team, you will lose access to your current team.
-        </div>
-
-        <div id="browse-team-results" class="team-list">
-          ${window.renderBrowseTeamResults()}
-        </div>
+        <div class="field"><label for="team-search">Search teams by name</label><input id="team-search" class="input" type="text" placeholder="Search teams..."></div>
+        <div class="alert alert-warn">In this demo version, you can only belong to one team at a time. If an admin approves your request for another team, you will lose access to your current team.</div>
+        <div id="browse-team-results" class="team-list">${window.renderBrowseTeamResults()}</div>
       </div>
     `;
   };
 
   window.renderBrowseTeamResults = function () {
-    if (!window.S.browseTeams.length) {
-      return `<div class="empty">No teams found.</div>`;
-    }
-
+    if (!window.S.browseTeams.length) return `<div class="empty">No teams found.</div>`;
     return window.S.browseTeams.map(team => `
       <div class="team-card">
-        <div>
-          <h4>${window.esc(team.name)}</h4>
-          <p>Team slug: ${window.esc(team.slug)}</p>
-        </div>
-        <div class="inline-actions">
-          <button class="btn btn-primary request-join-btn" data-team-id="${team.id}" data-team-name="${window.esc(team.name)}" type="button">
-            Request access
-          </button>
-        </div>
+        <div><h4>${window.esc(team.name)}</h4><p>Team slug: ${window.esc(team.slug)}</p></div>
+        <div class="inline-actions"><button class="btn btn-primary request-join-btn" data-team-id="${team.id}" data-team-name="${window.esc(team.name)}" type="button">Request access</button></div>
       </div>
     `).join('');
   };
 
   window.renderSummaryList = function () {
-    if (!window.S.rosterMembers.length) {
-      return `<div class="empty">No team members yet.</div>`;
-    }
-
+    if (!window.S.rosterMembers.length) return `<div class="empty">No team members yet.</div>`;
     return window.S.rosterMembers.map(m => {
       const usedPTO = window.usedDays(m.id, 'pto');
       const usedParental = window.usedDays(m.id, 'parental');
       const linkedSelf = window.S.user && m.userId === window.S.user.id;
-
       return `
         <button type="button" class="summary-card ${window.S.selectedMemberId === m.id ? 'active' : ''}" data-mid="${m.id}" style="--member-color:${m.color}">
           <div class="summary-card-head">
             <span class="summary-card-name">${window.esc(m.name)} ${linkedSelf ? '<span class="small muted">(you)</span>' : ''}</span>
             <span class="summary-card-dot" style="background:${m.color}"></span>
           </div>
-
           <div class="summary-meter-block">
-            <div class="summary-label-row">
-              <span>PTO</span>
-              <span>${usedPTO}/${m.maxPTO}</span>
-            </div>
-            <div class="meter">
-              <span class="meter-fill ${window.statusCls(usedPTO, m.maxPTO)}" style="width:${Math.min(100, m.maxPTO ? (usedPTO / m.maxPTO) * 100 : 0)}%"></span>
-            </div>
+            <div class="summary-label-row"><span>PTO</span><span>${usedPTO}/${m.maxPTO}</span></div>
+            <div class="meter"><span class="meter-fill ${window.statusCls(usedPTO, m.maxPTO)}" style="width:${Math.min(100, m.maxPTO ? (usedPTO / m.maxPTO) * 100 : 0)}%"></span></div>
           </div>
-
           <div class="summary-meter-block">
-            <div class="summary-label-row">
-              <span>Parental</span>
-              <span>${usedParental}/${m.maxParental}</span>
-            </div>
-            <div class="meter">
-              <span class="meter-fill ${window.statusCls(usedParental, m.maxParental)}" style="width:${Math.min(100, m.maxParental ? (usedParental / m.maxParental) * 100 : 0)}%"></span>
-            </div>
+            <div class="summary-label-row"><span>Parental</span><span>${usedParental}/${m.maxParental}</span></div>
+            <div class="meter"><span class="meter-fill ${window.statusCls(usedParental, m.maxParental)}" style="width:${Math.min(100, m.maxParental ? (usedParental / m.maxParental) * 100 : 0)}%"></span></div>
           </div>
         </button>
       `;
@@ -309,17 +217,9 @@
   window.renderEntries = function () {
     const m = window.rosterMember(window.S.selectedMemberId);
     if (!m) return `<div class="empty">Select a team member.</div>`;
-
-    const entries = window.S.daysOff
-      .filter(e => e.mid === m.id)
-      .sort((a, b) => a.s.localeCompare(b.s));
-
-    if (!entries.length) {
-      return `<div class="empty">No days off logged yet.</div>`;
-    }
-
+    const entries = window.S.daysOff.filter(e => e.mid === m.id).sort((a, b) => a.s.localeCompare(b.s));
+    if (!entries.length) return `<div class="empty">No days off logged yet.</div>`;
     const canEdit = window.canEditSelectedMember();
-
     return entries.map(e => {
       const days = window.dspan(e.s, e.e);
       return `
@@ -336,31 +236,20 @@
 
   window.renderDots = function (entries) {
     if (!entries.length) return '';
-
     const MAX = 7;
     let show = entries;
     let extra = false;
-
     if (entries.length > MAX) {
       show = entries.slice(0, MAX - 1);
       extra = true;
     }
-
     let h = show.map(e => {
       const m = window.rosterMember(e.mid);
       if (!m) return '';
-
-      if (e.t === 'sick') {
-        return `<span class="dot dot-sick" style="color:${m.color}; border-color:${m.color}"></span>`;
-      }
-
-      if (e.t === 'parental') {
-        return `<span class="dot dot-parental" style="background:${m.color}"></span>`;
-      }
-
+      if (e.t === 'sick') return `<span class="dot dot-sick" style="color:${m.color}; border-color:${m.color}"></span>`;
+      if (e.t === 'parental') return `<span class="dot dot-parental" style="background:${m.color}"></span>`;
       return `<span class="dot" style="background:${m.color}"></span>`;
     }).join('');
-
     if (extra) h += `<span class="small muted">…</span>`;
     return h;
   };
@@ -371,72 +260,38 @@
     const start = window.sdow(y, m);
     const td = window.today();
     const prevDays = window.dim(m === 0 ? y - 1 : y, m === 0 ? 11 : m - 1);
-
     let h = '';
-
     for (let i = 0; i < start; i++) {
       const d = prevDays - start + 1 + i;
       h += `<div class="day-cell other-month" aria-hidden="true"><span class="day-number">${d}</span></div>`;
     }
-
     for (let d = 1; d <= days; d++) {
       const ds = window.dstr(y, m, d);
       const dt = new Date(y, m, d);
       const wk = dt.getDay() === 0 || dt.getDay() === 6;
       const isToday = ds === td;
       const selStart = window.S.pickStart === ds;
-
-      const cls = [
-        'day-cell',
-        window.canEditSelectedMember() ? 'cm' : '',
-        wk ? 'weekend' : '',
-        isToday ? 'today' : '',
-        selStart ? 'selection-start' : ''
-      ].filter(Boolean).join(' ');
-
+      const cls = ['day-cell', window.canEditSelectedMember() ? 'cm' : '', wk ? 'weekend' : '', isToday ? 'today' : '', selStart ? 'selection-start' : ''].filter(Boolean).join(' ');
       const entries = window.entFor(ds);
-
-      h += `
-        <div class="${cls}" data-d="${ds}" role="gridcell" tabindex="0">
-          <span class="day-number">${d}</span>
-          <div class="day-dots">${window.renderDots(entries)}</div>
-        </div>
-      `;
+      h += `<div class="${cls}" data-d="${ds}" role="gridcell" tabindex="0"><span class="day-number">${d}</span><div class="day-dots">${window.renderDots(entries)}</div></div>`;
     }
-
     const tot = start + days;
     const rem = (7 - (tot % 7)) % 7;
     for (let i = 1; i <= rem; i++) {
       h += `<div class="day-cell other-month" aria-hidden="true"><span class="day-number">${i}</span></div>`;
     }
-
     return h;
   };
 
   window.renderSelectionStatus = function () {
-    if (!window.S.selectedMemberId) {
-      return `<div class="alert alert-info">Select a team member from the right-hand list.</div>`;
-    }
-
-    if (!window.canEditSelectedMember()) {
-      return `<div class="alert alert-info">You can view all team calendars. Owners and admins can edit anyone. Regular users can edit only their own calendar.</div>`;
-    }
-
-    if (window.S.pickStart) {
-      return `
-        <div class="selection-status">
-          <span id="selection-text">Start: ${window.fmtS(window.S.pickStart)} — click another day to complete</span>
-          <button id="selection-cancel" class="btn btn-ghost" type="button">Cancel</button>
-        </div>
-      `;
-    }
-
+    if (!window.S.selectedMemberId) return `<div class="alert alert-info">Select a team member from the right-hand list.</div>`;
+    if (!window.canEditSelectedMember()) return `<div class="alert alert-info">You can view all team calendars. Owners and admins can edit anyone. Regular users can edit only their own calendar.</div>`;
+    if (window.S.pickStart) return `<div class="selection-status"><span id="selection-text">Start: ${window.fmtS(window.S.pickStart)} — click another day to complete</span><button id="selection-cancel" class="btn btn-ghost" type="button">Cancel</button></div>`;
     return `<div class="alert alert-info">Click a start date and an end date to add time off for the selected team member.</div>`;
   };
 
   window.renderCalendarView = function () {
     const sel = window.rosterMember(window.S.selectedMemberId);
-
     return `
       <div class="calendar-wrap">
         <section class="calendar-panel">
@@ -445,25 +300,14 @@
             <h2>${window.MONTHS[window.S.month.m]} ${window.S.month.y}</h2>
             <button id="next-month" class="btn btn-ghost nav-btn" type="button">›</button>
           </div>
-
-          <div class="calendar-weekdays">
-            <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span>
-            <span>Fri</span><span>Sat</span><span>Sun</span>
-          </div>
-
+          <div class="calendar-weekdays"><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span></div>
           <div id="calendar-days" class="calendar-grid">${window.renderCalendar()}</div>
-
-          <div style="margin-top:14px">
-            ${window.renderSelectionStatus()}
-          </div>
+          <div style="margin-top:14px">${window.renderSelectionStatus()}</div>
         </section>
-
         <aside class="side-panel">
           <h3 style="margin:0 0 12px">Team Members</h3>
           <div id="summary-list" class="summary-list">${window.renderSummaryList()}</div>
-
           <div class="hr"></div>
-
           <h3 style="margin:0 0 12px">${sel ? `${window.esc(sel.name)}'s Days Off` : 'Days Off'}</h3>
           <div id="entries-list" class="entry-list">${window.renderEntries()}</div>
         </aside>
@@ -472,10 +316,7 @@
   };
 
   window.renderPendingRequests = function () {
-    if (!window.S.joinRequests.length) {
-      return `<div class="empty">No pending requests.</div>`;
-    }
-
+    if (!window.S.joinRequests.length) return `<div class="empty">No pending requests.</div>`;
     return window.S.joinRequests.map(req => `
       <div class="list-item">
         <div>
@@ -492,24 +333,13 @@
   };
 
   window.renderMemberships = function () {
-    if (!window.S.memberships.length) {
-      return `<div class="empty">No team users loaded.</div>`;
-    }
-
+    if (!window.S.memberships.length) return `<div class="empty">No team users loaded.</div>`;
     return window.S.memberships.map(m => {
-      const badgeClass =
-        m.role === 'owner' ? 'badge-owner' :
-        m.role === 'admin' ? 'badge-admin' :
-        'badge-member';
-
+      const badgeClass = m.role === 'owner' ? 'badge-owner' : m.role === 'admin' ? 'badge-admin' : 'badge-member';
       const canPromote = window.isOwner() && m.role === 'member';
-
       return `
         <div class="list-item">
-          <div>
-            <div><strong>${window.esc(m.profile?.full_name || m.profile?.email || 'Unknown user')}</strong></div>
-            <div class="small muted">${window.esc(m.profile?.email || '')}</div>
-          </div>
+          <div><div><strong>${window.esc(m.profile?.full_name || m.profile?.email || 'Unknown user')}</strong></div><div class="small muted">${window.esc(m.profile?.email || '')}</div></div>
           <div class="inline-actions">
             <span class="badge ${badgeClass}">${window.esc(m.role)}</span>
             ${canPromote ? `<button class="btn btn-secondary promote-admin-btn" data-membership-id="${m.id}" type="button">Make admin</button>` : ''}
@@ -520,10 +350,7 @@
   };
 
   window.renderRosterManagementList = function () {
-    if (!window.S.rosterMembers.length) {
-      return '<div class="empty">No roster members yet.</div>';
-    }
-
+    if (!window.S.rosterMembers.length) return '<div class="empty">No roster members yet.</div>';
     return window.S.rosterMembers.map(m => `
       <div class="list-item">
         <div style="flex:1">
@@ -543,88 +370,51 @@
 
   window.renderAdminView = function () {
     const activeInvite = window.S.activeInvite;
-
     return `
       <div class="admin-grid">
         <section class="admin-section">
           <h3 class="section-title">Invite link</h3>
           <div id="invite-link-area" class="stack">
-            ${
-              activeInvite && activeInvite.is_active
-                ? `
-                  <div class="alert alert-success">
-                    Active invite available. Expires in
-                    <span id="active-invite-countdown">${window.esc(window.formatRemaining(activeInvite.expires_at))}</span>.
-                  </div>
-                  <div class="codebox" id="active-invite-link">${window.esc(`${window.SABEE_CONFIG.APP_URL}?invite=${activeInvite.token}`)}</div>
-                  <div class="row">
-                    <button id="invite-btn" class="btn btn-primary" type="button">Show / refresh invite</button>
-                    <button id="copy-invite-btn" class="btn btn-secondary" type="button">Copy link</button>
-                  </div>
-                `
-                : `
-                  <div class="empty">No active invite yet.</div>
-                  <div class="row">
-                    <button id="invite-btn" class="btn btn-primary" type="button">Create invite</button>
-                  </div>
-                `
-            }
+            ${activeInvite && activeInvite.is_active ? `
+              <div class="alert alert-success">Active invite available. Expires in <span id="active-invite-countdown">${window.esc(window.formatRemaining(activeInvite.expires_at))}</span>.</div>
+              <div class="codebox" id="active-invite-link">${window.esc(`${window.SABEE_CONFIG.APP_URL}?invite=${activeInvite.token}`)}</div>
+              <div class="row">
+                <button id="invite-btn" class="btn btn-primary" type="button">Show / refresh invite</button>
+                <button id="copy-invite-btn" class="btn btn-secondary" type="button">Copy link</button>
+              </div>
+            ` : `
+              <div class="empty">No active invite yet.</div>
+              <div class="row"><button id="invite-btn" class="btn btn-primary" type="button">Create invite</button></div>
+            `}
           </div>
         </section>
-
         <section class="admin-section">
           <h3 class="section-title">Pending join requests</h3>
           <div class="list">${window.renderPendingRequests()}</div>
         </section>
-
         <section class="admin-section">
           <h3 class="section-title">Team user accounts</h3>
-          <div class="alert alert-info">
-            Owners can grant admin rights. Admins can manage roster members and team data but cannot promote other users.
-          </div>
+          <div class="alert alert-info">Owners can grant admin rights. Admins can manage roster members and team data but cannot promote other users.</div>
           <div class="list">${window.renderMemberships()}</div>
         </section>
-
         <section class="admin-section">
           <h3 class="section-title">Add roster member</h3>
           <div class="grid-2" style="margin-bottom:14px">
-            <div class="field">
-              <label for="new-member-name">Name</label>
-              <input id="new-member-name" class="input" type="text" placeholder="e.g. Anna">
-            </div>
-            <div class="field">
-              <label for="new-member-color">Color</label>
-              <input id="new-member-color" class="input" type="color" value="${window.nextColor(window.S.rosterMembers)}">
-            </div>
-            <div class="field">
-              <label for="new-member-pto">PTO allowance</label>
-              <input id="new-member-pto" class="input" type="number" min="0" value="25">
-            </div>
-            <div class="field">
-              <label for="new-member-parental">Parental allowance</label>
-              <input id="new-member-parental" class="input" type="number" min="0" value="0">
-            </div>
+            <div class="field"><label for="new-member-name">Name</label><input id="new-member-name" class="input" type="text" placeholder="e.g. Anna"></div>
+            <div class="field"><label for="new-member-color">Color</label><input id="new-member-color" class="input" type="color" value="${window.nextColor(window.S.rosterMembers)}"></div>
+            <div class="field"><label for="new-member-pto">PTO allowance</label><input id="new-member-pto" class="input" type="number" min="0" value="25"></div>
+            <div class="field"><label for="new-member-parental">Parental allowance</label><input id="new-member-parental" class="input" type="number" min="0" value="0"></div>
           </div>
-
-          <div class="row">
-            <button id="add-roster-member-btn" class="btn btn-primary" type="button">Add roster member</button>
-          </div>
+          <div class="row"><button id="add-roster-member-btn" class="btn btn-primary" type="button">Add roster member</button></div>
         </section>
-
         <section class="admin-section">
           <h3 class="section-title">Roster members</h3>
           <div class="list">${window.renderRosterManagementList()}</div>
         </section>
-
         <section class="admin-section">
           <h3 class="section-title">Danger zone</h3>
-          <div class="alert alert-warn">
-            Resetting team data will delete all roster members and all days off for this team.
-            It will not delete authenticated user accounts or remove the team itself.
-          </div>
-          <div class="row">
-            <button id="reset-team-data-btn" class="btn btn-danger" type="button">Reset team data</button>
-          </div>
+          <div class="alert alert-warn">Resetting team data will delete all roster members and all days off for this team. It will not delete authenticated user accounts or remove the team itself.</div>
+          <div class="row"><button id="reset-team-data-btn" class="btn btn-danger" type="button">Reset team data</button></div>
         </section>
       </div>
     `;
@@ -633,35 +423,18 @@
   window.renderEditMemberModal = function () {
     const m = window.S.editingMember;
     if (!m) return '';
-
     return `
       <div id="edit-member-overlay" class="modal-overlay">
         <div class="modal-content">
           <h3 class="modal-title">Edit roster member</h3>
-          <p class="modal-subtitle">Update this team member’s display and allowance values.</p>
-
+          <p class="modal-subtitle">Update this team member's display and allowance values.</p>
           <div class="stack">
-            <div class="field">
-              <label for="edit-member-name">Name</label>
-              <input id="edit-member-name" class="input" type="text" value="${window.esc(m.name)}">
-            </div>
-
-            <div class="field">
-              <label for="edit-member-color">Color</label>
-              <input id="edit-member-color" class="input" type="color" value="${window.esc(m.color)}">
-            </div>
-
+            <div class="field"><label for="edit-member-name">Name</label><input id="edit-member-name" class="input" type="text" value="${window.esc(m.name)}"></div>
+            <div class="field"><label for="edit-member-color">Color</label><input id="edit-member-color" class="input" type="color" value="${window.esc(m.color)}"></div>
             <div class="grid-2">
-              <div class="field">
-                <label for="edit-member-pto">PTO allowance</label>
-                <input id="edit-member-pto" class="input" type="number" min="0" value="${m.maxPTO}">
-              </div>
-              <div class="field">
-                <label for="edit-member-parental">Parental allowance</label>
-                <input id="edit-member-parental" class="input" type="number" min="0" value="${m.maxParental}">
-              </div>
+              <div class="field"><label for="edit-member-pto">PTO allowance</label><input id="edit-member-pto" class="input" type="number" min="0" value="${m.maxPTO}"></div>
+              <div class="field"><label for="edit-member-parental">Parental allowance</label><input id="edit-member-parental" class="input" type="number" min="0" value="${m.maxParental}"></div>
             </div>
-
             <div class="row">
               <button id="save-edit-member-btn" class="btn btn-primary" type="button">Save changes</button>
               <button id="cancel-edit-member-btn" class="btn btn-secondary" type="button">Cancel</button>
@@ -674,49 +447,30 @@
 
   window.renderDayOffModal = function () {
     if (!window.S.modalRange) return '';
-
     const m = window.rosterMember(window.S.selectedMemberId);
     if (!m) return '';
-
     const { s, e } = window.S.modalRange;
     const rangeDays = window.dspan(s, e);
     const usedPTO = window.usedDays(m.id, 'pto');
     const usedParental = window.usedDays(m.id, 'parental');
     const hasOverlap = window.overlap(m.id, s, e);
-
     return `
       <div id="modal-overlay" class="modal-overlay">
         <div class="modal-content">
           <h3 class="modal-title">Log Days Off</h3>
-          <p class="modal-subtitle">
-            <strong>${window.esc(m.name)}</strong> · ${window.esc(window.fmtS(s))} → ${window.esc(window.fmtS(e))}
-          </p>
-
+          <p class="modal-subtitle"><strong>${window.esc(m.name)}</strong> · ${window.esc(window.fmtS(s))} → ${window.esc(window.fmtS(e))}</p>
           ${hasOverlap ? `<div class="alert alert-error">This range overlaps with an existing day-off entry.</div>` : ''}
-
           <div class="modal-options">
             <button id="modal-btn-pto" class="modal-option" type="button" ${hasOverlap ? 'disabled' : ''}>
-              <div>
-                <span class="option-label">🏖️ Paid Time Off</span>
-                <span class="option-detail">${rangeDays} day${rangeDays > 1 ? 's' : ''} · used ${usedPTO}/${m.maxPTO}</span>
-              </div>
+              <div><span class="option-label">🏖️ Paid Time Off</span><span class="option-detail">${rangeDays} day${rangeDays > 1 ? 's' : ''} · used ${usedPTO}/${m.maxPTO}</span></div>
             </button>
-
             <button id="modal-btn-sick" class="modal-option" type="button" ${hasOverlap ? 'disabled' : ''}>
-              <div>
-                <span class="option-label">🤒 Sick Leave</span>
-                <span class="option-detail">${rangeDays} day${rangeDays > 1 ? 's' : ''}</span>
-              </div>
+              <div><span class="option-label">🤒 Sick Leave</span><span class="option-detail">${rangeDays} day${rangeDays > 1 ? 's' : ''}</span></div>
             </button>
-
             <button id="modal-btn-parental" class="modal-option" type="button" ${(hasOverlap || m.maxParental <= 0) ? 'disabled' : ''}>
-              <div>
-                <span class="option-label">👶 Parental Leave</span>
-                <span class="option-detail">${rangeDays} day${rangeDays > 1 ? 's' : ''} · used ${usedParental}/${m.maxParental}</span>
-              </div>
+              <div><span class="option-label">👶 Parental Leave</span><span class="option-detail">${rangeDays} day${rangeDays > 1 ? 's' : ''} · used ${usedParental}/${m.maxParental}</span></div>
             </button>
           </div>
-
           <button id="modal-cancel" class="btn btn-secondary" type="button">Cancel</button>
         </div>
       </div>
@@ -729,11 +483,8 @@
         ${window.renderTopbar()}
         <div class="container">
           ${window.renderMessageBlock()}
-          ${window.S.appView === 'admin' && window.isAdmin()
-            ? window.renderAdminView()
-            : window.renderCalendarView()}
+          ${window.S.appView === 'admin' && window.isAdmin() ? window.renderAdminView() : window.renderCalendarView()}
         </div>
-
         ${window.renderDayOffModal()}
         ${window.renderEditMemberModal()}
       </div>
@@ -745,18 +496,7 @@
     if (!app) return;
 
     if (window.S.loading) {
-      app.innerHTML = `
-        <div class="page">
-          ${window.renderTopbar()}
-          <div class="hero-wrap">
-            <div class="card auth-card">
-              <div class="auth-head">
-                <h2>Loading Sabee…</h2>
-              </div>
-            </div>
-          </div>
-        </div>
-      `;
+      app.innerHTML = `<div class="page">${window.renderTopbar()}<div class="hero-wrap"><div class="card auth-card"><div class="auth-head"><h2>Loading Sabee…</h2></div></div></div></div>`;
       return;
     }
 
