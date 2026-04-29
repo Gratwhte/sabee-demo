@@ -264,32 +264,6 @@
     }
   }
 
-  async function doSignOut() {
-    try {
-      await window.signOut();
-    } catch (err) {
-      console.warn('Supabase signOut error, clearing state anyway', err);
-    }
-    window.S.session = null;
-    window.S.user = null;
-    window.S.profile = null;
-    window.S.activeTeam = null;
-    window.S.membership = null;
-    window.S.memberships = [];
-    window.S.rosterMembers = [];
-    window.S.daysOff = [];
-    window.S.joinRequests = [];
-    window.S.activeInvite = null;
-    window.S.selectedMemberId = null;
-    window.S.pickStart = null;
-    window.S.modalRange = null;
-    window.S.editingMember = null;
-    window.S.appView = 'calendar';
-    window.clearError();
-    window.clearMessage();
-    window.render();
-  }
-
   window.bindGlobal = function () {
     if (window.S.listenersBound) return;
     window.S.listenersBound = true;
@@ -300,25 +274,31 @@
       const target = e.target instanceof Element ? e.target : null;
       if (!target) return;
 
-      // Sign out
+      // SIGN OUT - just call signOut and reload
       if (target.id === 'sign-out-btn') {
-        e.preventDefault();
-        e.stopPropagation();
-        await doSignOut();
+        try {
+          await window.signOut();
+        } catch (err) {
+          console.warn('Sign out error:', err);
+        }
+        // Just reload the page
+        window.location.reload();
         return;
       }
 
       // Admin view toggle
-      if (target.id === 'topnav-view-toggle') {
-        e.preventDefault();
-        if (window.isAdmin()) {
-          window.S.appView = window.S.appView === 'calendar' ? 'admin' : 'calendar';
-          window.render();
-        }
+      if (target.id === 'btn-admin') {
+        window.S.appView = 'admin';
+        window.render();
         return;
       }
 
-      // Invite continue
+      if (target.id === 'btn-calendar') {
+        window.S.appView = 'calendar';
+        window.render();
+        return;
+      }
+
       if (target.id === 'continue-invite-btn') {
         window.clearError();
         window.clearMessage();
@@ -334,7 +314,6 @@
         return;
       }
 
-      // Auth tabs
       if (target.id === 'tab-login') {
         window.clearError();
         window.clearMessage();
@@ -350,7 +329,6 @@
         return;
       }
 
-      // Google
       if (target.id === 'google-btn') {
         try {
           await window.signInWithGoogle();
@@ -362,7 +340,6 @@
         return;
       }
 
-      // Login
       if (target.id === 'login-btn') {
         const email = window.$('login-email')?.value?.trim();
         const password = window.$('login-password')?.value || '';
@@ -382,7 +359,6 @@
         return;
       }
 
-      // Register
       if (target.id === 'register-btn') {
         const fullName = window.$('reg-full-name')?.value?.trim();
         const email = window.$('reg-email')?.value?.trim();
@@ -402,7 +378,6 @@
         return;
       }
 
-      // Team tabs
       if (target.id === 'tab-create-team') {
         window.clearError();
         window.clearMessage();
@@ -419,7 +394,6 @@
         return;
       }
 
-      // Create team
       if (target.id === 'create-team-btn') {
         const teamName = window.$('team-name')?.value?.trim();
         const creatorDisplayName = window.$('creator-display-name')?.value?.trim();
@@ -438,7 +412,6 @@
         return;
       }
 
-      // Request join
       if (target.classList.contains('request-join-btn')) {
         const teamId = target.dataset.teamId;
         const teamName = target.dataset.teamName || 'this team';
@@ -459,7 +432,6 @@
         return;
       }
 
-      // Approve/reject
       if (target.classList.contains('approve-request-btn')) {
         try {
           await window.approveJoinRequest(target.dataset.requestId);
@@ -487,7 +459,6 @@
         return;
       }
 
-      // Invite
       if (target.id === 'copy-invite-btn') {
         const linkEl = window.$('active-invite-link');
         if (!linkEl) return;
@@ -516,7 +487,6 @@
         return;
       }
 
-      // Promote
       if (target.classList.contains('promote-admin-btn')) {
         try {
           await window.promoteToAdmin(target.dataset.membershipId);
@@ -531,7 +501,6 @@
         return;
       }
 
-      // Summary card select
       if (target.classList.contains('summary-card')) {
         window.S.selectedMemberId = target.dataset.mid;
         window.S.pickStart = null;
@@ -539,7 +508,6 @@
         return;
       }
 
-      // Calendar nav
       if (target.id === 'prev-month') {
         navMonth(-1);
         return;
@@ -549,21 +517,18 @@
         return;
       }
 
-      // Calendar day
       const cell = target.closest('.day-cell.cm');
       if (cell) {
         onDayClick(cell.dataset.d);
         return;
       }
 
-      // Selection
       if (target.id === 'selection-cancel') {
         window.S.pickStart = null;
         window.render();
         return;
       }
 
-      // Modal
       if (target.id === 'modal-cancel') {
         window.S.modalRange = null;
         window.render();
@@ -582,7 +547,6 @@
         return;
       }
 
-      // Entry delete
       if (target.classList.contains('entry-delete-btn')) {
         if (!window.canEditSelectedMember()) return;
         if (!window.confirm('Delete this day off entry?')) return;
@@ -599,7 +563,6 @@
         return;
       }
 
-      // Roster
       if (target.id === 'add-roster-member-btn') {
         await addRosterMember();
         return;
@@ -633,7 +596,6 @@
         return;
       }
 
-      // Reset
       if (target.id === 'reset-team-data-btn') {
         if (!window.confirm('Reset all roster members and all days off for this team?')) return;
         try {
