@@ -212,7 +212,7 @@
   }
 
   async function addRosterMember() {
-    if (!window.S.activeTeam) return;
+    if (!window.isAdmin() || !window.S.activeTeam) return;
 
     const name = window.$('new-member-name')?.value?.trim();
     const color = window.$('new-member-color')?.value || window.nextColor(window.S.rosterMembers);
@@ -246,7 +246,7 @@
 
   async function saveEditedRosterMember() {
     const m = window.S.editingMember;
-    if (!m) return;
+    if (!m || !window.isAdmin()) return;
 
     const name = window.$('edit-member-name')?.value?.trim();
     const color = window.$('edit-member-color')?.value || m.color;
@@ -364,9 +364,7 @@
           await window.signInWithEmail({ email, password });
           await refreshActiveTeamState();
           await continueInviteFlowAfterAuth();
-          if (!window.S.activeTeam) {
-            await refreshBrowseTeams();
-          }
+          if (!window.S.activeTeam) await refreshBrowseTeams();
           window.render();
         } catch (err) {
           console.error(err);
